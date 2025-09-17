@@ -47,7 +47,7 @@ func (s *Service) TaskAdd(telegramID int, args string) (string, error) {
 	}
 
 	// Эндпоинт
-	url := "http://theory-service:8081/createtask"
+	url := "http://theory-service:8081/taskadd"
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(newJson))
 	if err != nil {
 		s.logger.Error("Ошибка формирования запроса к theory-service", zap.Error(err))

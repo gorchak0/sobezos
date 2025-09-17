@@ -3,12 +3,13 @@ package service
 import (
 	"encoding/json"
 	"net/http"
+	"sobezos/services/bot-service/internal/models"
 	"strconv"
 )
 
 // UserState API helpers
-func (s *Service) UserStateGet(userID int) (*map[string]interface{}, error) {
-	url := "http://user-service:8082/states/" + strconv.Itoa(userID)
+func (s *Service) UserStateGet(userID int) (*models.UserState, error) {
+	url := "http://user-service:8082/userstateget?user_id=" + strconv.Itoa(userID)
 	resp, err := http.Get(url)
 	if err != nil {
 		return nil, err
@@ -17,7 +18,7 @@ func (s *Service) UserStateGet(userID int) (*map[string]interface{}, error) {
 	if resp.StatusCode != http.StatusOK {
 		return nil, nil
 	}
-	var state map[string]interface{}
+	var state models.UserState
 	if err := json.NewDecoder(resp.Body).Decode(&state); err != nil {
 		return nil, err
 	}

@@ -8,7 +8,7 @@ import (
 
 // TagGet получает список всех доступных тегов с описаниями из theory-service
 func (s *Service) TagGet() (string, error) {
-	url := "http://theory-service:8081/getalltags"
+	url := "http://theory-service:8081/tagget"
 	resp, err := http.Get(url)
 	if err != nil {
 		return "Ошибка запроса к theory-service", err

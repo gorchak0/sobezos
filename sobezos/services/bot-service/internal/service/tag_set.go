@@ -2,6 +2,7 @@ package service
 
 import (
 	"fmt"
+	"sobezos/services/bot-service/internal/models"
 	"strings"
 )
 
@@ -10,17 +11,7 @@ func (s *Service) TagSet(telegramID int, args string) (string, error) {
 	state, err := s.UserStateGet(telegramID)
 	var currentTags []string
 	if err == nil && state != nil {
-		if tagsIface, ok := (*state)["theory_tags"]; ok {
-			if tagsSlice, ok := tagsIface.([]interface{}); ok {
-				for _, t := range tagsSlice {
-					if str, ok := t.(string); ok {
-						currentTags = append(currentTags, str)
-					}
-				}
-			} else if tagsSlice, ok := tagsIface.([]string); ok {
-				currentTags = tagsSlice
-			}
-		}
+		currentTags = state.TheoryTags
 	}
 
 	// Парсим новые тэги
@@ -45,9 +36,20 @@ func (s *Service) TagSet(telegramID int, args string) (string, error) {
 	}
 
 	// Сохраняем состояние пользователя
-	s.UserStateEdit(telegramID, map[string]interface{}{
-		"theory_tags": mergedTags,
+	s.UserStateEdit(telegramID, models.UserState{
+		TheoryTags: mergedTags,
 	})
 
-	return fmt.Sprintf("Тэги успешно добавлены: %v", mergedTags), nil
+	// Повторно читаем состояние пользователя
+	updatedState, err := s.UserStateGet(telegramID)
+	var allTags []string
+	if err == nil && updatedState != nil {
+		allTags = updatedState.TheoryTags
+	}
+
+	return fmt.Sprintf(
+		"Тэги успешно добавлены: %s\nВсе ваши тэги: %s",
+		strings.Join(newTags, ", "),
+		strings.Join(allTags, ", "),
+	), nil
 }

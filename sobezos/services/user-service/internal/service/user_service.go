@@ -25,14 +25,10 @@ func (s *UserService) CheckUser(telegramID int64) (exists bool, role string, err
 	return true, user.Role, nil
 }
 
-func (s *UserService) AddUser(adminID int64, user models.User) error {
-	if !s.UserRepo.IsAdmin(adminID) {
-		return repository.ErrForbidden
-	}
+func (s *UserService) AddUser(user models.User) error {
 	if s.UserRepo.Exists(user.TelegramID) {
 		return repository.ErrUserExists
 	}
-	user.Role = "user"
 	return s.UserRepo.Add(user)
 }
 
@@ -40,6 +36,6 @@ func (s *UserService) GetState(userID int64) (interface{}, error) {
 	return s.StateRepo.Get(userID)
 }
 
-func (s *UserService) PatchState(userID int64, patchMap map[string]interface{}) error {
-	return s.StateRepo.Patch(userID, patchMap)
+func (s *UserService) PatchState(userID int64, patch models.UserState) error {
+	return s.StateRepo.Patch(userID, patch)
 }

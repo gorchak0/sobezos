@@ -2,25 +2,25 @@ package service
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"sobezos/services/bot-service/internal/models"
 )
 
 func (s *Service) AnswerGet(telegramID int) (string, error) {
 
 	// Получить id последнего теоретического вопроса
 	state, err := s.UserStateGet(telegramID)
-	//обработка ошибки
 	if err != nil || state == nil {
 		return "Нет информации о последней задаче", ErrServiceUnavailable
 	}
-	//достаем id
-	taskID, ok := (*state)["last_theory_task_id"]
-	if !ok {
+	taskID := state.LastTheoryTaskID
+	if taskID == 0 {
 		return "Нет информации о последней задаче", ErrServiceUnavailable
 	}
 
 	//получение текста вопроса
-	url := "http://theory-service:8081/answerget?task_id=" + taskID.(string)
+	url := fmt.Sprintf("http://theory-service:8081/answerget?task_id=%d", taskID)
 	resp, err := http.Get(url)
 	if err != nil {
 		return "", err
@@ -37,9 +37,9 @@ func (s *Service) AnswerGet(telegramID int) (string, error) {
 	}
 
 	//фиксируем
-	err = s.UserStateEdit(telegramID, map[string]interface{}{
-		"last_action":        "get_answer",
-		"last_theory_answer": res.Answer,
+	err = s.UserStateEdit(telegramID, models.UserState{
+		LastAction:       "get_answer",
+		LastTheoryTaskID: taskID,
 	})
 	if err != nil {
 		return "", err

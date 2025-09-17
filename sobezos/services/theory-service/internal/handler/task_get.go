@@ -26,7 +26,7 @@ func (h *TaskHandler) TaskGet(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-
+	//
 	// Получаем задачу с учётом тегов
 	task, err := h.service.GetRandomTask(tags)
 	if err != nil || task == nil {

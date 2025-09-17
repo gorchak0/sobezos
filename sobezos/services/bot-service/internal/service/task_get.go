@@ -7,6 +7,8 @@ import (
 	"strconv"
 	"strings"
 
+	"sobezos/services/bot-service/internal/models"
+
 	"go.uber.org/zap"
 )
 
@@ -15,17 +17,7 @@ func (s *Service) TaskGet(telegramID int) (string, error) {
 	state, err := s.UserStateGet(telegramID)
 	var tags []string
 	if err == nil && state != nil {
-		if tagsIface, ok := (*state)["theory_tags"]; ok {
-			if tagsSlice, ok := tagsIface.([]interface{}); ok {
-				for _, t := range tagsSlice {
-					if str, ok := t.(string); ok {
-						tags = append(tags, str)
-					}
-				}
-			} else if tagsSlice, ok := tagsIface.([]string); ok {
-				tags = tagsSlice
-			}
-		}
+		tags = state.TheoryTags
 	}
 
 	// Формируем query-параметр
@@ -64,9 +56,9 @@ func (s *Service) TaskGet(telegramID int) (string, error) {
 	}
 
 	// Сохраняем состояние пользователя
-	s.UserStateEdit(telegramID, map[string]interface{}{
-		"last_theory_task_id": task.ID,
-		"last_action":         "get_task",
+	s.UserStateEdit(telegramID, models.UserState{
+		LastTheoryTaskID: task.ID,
+		LastAction:       "get_task",
 	})
 	tagsText := ""
 	if len(task.Tags) > 0 {

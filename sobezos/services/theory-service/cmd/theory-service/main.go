@@ -28,8 +28,8 @@ func main() {
 	defer db.Close()
 
 	migrations.Migrate(db, "internal/migrations/001_create_tasks_table.sql")
-	migrations.Migrate(db, "internal/migrations/002_create_answers_table.sql")
-	migrations.Migrate(db, "internal/migrations/003_create_users_table.sql")
+	migrations.Migrate(db, "internal/migrations/002_create_tags_table.sql")
+	migrations.Migrate(db, "internal/migrations/003_create_tasks_tags_table.sql")
 
 	logger, err := zap.NewProduction()
 	if err != nil {

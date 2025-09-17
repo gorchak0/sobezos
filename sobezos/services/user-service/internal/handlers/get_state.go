@@ -4,22 +4,21 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
-	"strings"
 
 	"go.uber.org/zap"
 )
 
-// GET /states/{user_id}
+// "http://user-service:8082/userstateget?user_id="
 func (h *UserServiceHandler) GetState(w http.ResponseWriter, r *http.Request) {
-	parts := strings.Split(r.URL.Path, "/")
-	if len(parts) < 3 {
-		h.Logger.Warn("Invalid path", zap.String("path", r.URL.Path))
-		http.Error(w, "Invalid path", http.StatusBadRequest)
+	userIDStr := r.URL.Query().Get("user_id")
+	if userIDStr == "" {
+		h.Logger.Warn("Missing user_id query param", zap.String("url", r.URL.String()))
+		http.Error(w, "Missing user_id query param", http.StatusBadRequest)
 		return
 	}
-	userID, err := strconv.ParseInt(parts[2], 10, 64)
+	userID, err := strconv.ParseInt(userIDStr, 10, 64)
 	if err != nil {
-		h.Logger.Warn("Invalid user_id", zap.String("user_id", parts[2]), zap.Error(err))
+		h.Logger.Warn("Invalid user_id", zap.String("user_id", userIDStr), zap.Error(err))
 		http.Error(w, "Invalid user_id", http.StatusBadRequest)
 		return
 	}

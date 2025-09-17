@@ -18,27 +18,31 @@ type UserStateRepository struct {
 }
 
 // Patch обновляет указанные поля user_state для пользователя по userID.
-// patch — карта с именами и значениями обновляемых полей.
-// Если patch пустой, ничего не происходит.
-func (r *UserStateRepository) Patch(userID int64, patch map[string]interface{}) error {
-	if len(patch) == 0 {
-		return nil
-	}
-	// Формируем SET-часть запроса и аргументы
+func (r *UserStateRepository) Patch(userID int64, patch models.UserState) error {
 	setParts := []string{}
 	args := []interface{}{}
 	idx := 1
-	for k, v := range patch {
-		setParts = append(setParts, k+"=$"+strconv.Itoa(idx))
-		args = append(args, v)
+
+	//fmt.Printf("\n\n user-service - user_state_repository - patch.TheoryTags - %v\n", patch.TheoryTags)
+
+	if patch.TheoryTags != nil {
+		setParts = append(setParts, "theory_tags=$"+strconv.Itoa(idx))
+		args = append(args, pq.Array(patch.TheoryTags))
 		idx++
+		//fmt.Println("--- не равно nil ---")
+	} else {
+		//fmt.Println("--- равно nil ---")
 	}
-	// Обновляем поле updated_at
+
+	if len(setParts) == 0 {
+		return nil
+	}
 	setParts = append(setParts, "updated_at=now()")
 	setClause := strings.Join(setParts, ", ")
 	args = append(args, userID)
 	query := `UPDATE user_states SET ` + setClause + ` WHERE user_id=$` + strconv.Itoa(idx)
-	// Выполняем запрос
+
+	//fmt.Printf("\n\nquery=%s, args=%v\n\n\n", query, args)
 	_, err := r.DB.Exec(query, args...)
 	if err != nil {
 		log.Printf("[Patch] Error updating user_state for user_id=%d: %v, query=%s, args=%v", userID, err, query, args)
@@ -56,11 +60,28 @@ func NewUserStateRepository(db *sql.DB) *UserStateRepository {
 // Get возвращает состояние пользователя по userID.
 // Возвращает структуру UserState или ошибку, если запись не найдена или возникла ошибка.
 func (r *UserStateRepository) Get(userID int64) (*models.UserState, error) {
-	// Выполняем SELECT-запрос с COALESCE для nullable-полей
-	row := r.DB.QueryRow(`SELECT user_id, COALESCE(last_theory_task_id, 0), COALESCE(last_code_task_id, 0), COALESCE(last_theory_answer, ''), COALESCE(last_code_answer, ''), COALESCE(theory_tags, ARRAY[]::text[]), COALESCE(code_tags, ARRAY[]::text[]), COALESCE(last_action, ''), updated_at FROM user_states WHERE user_id=$1`, userID)
+
+	row := r.DB.QueryRow(`
+    SELECT user_id, last_theory_task_id, last_code_task_id,
+           last_theory_answer, last_code_answer,
+           theory_tags, code_tags, last_action, updated_at
+    FROM user_states
+    WHERE user_id=$1
+`, userID)
+
 	var state models.UserState
-	// Сканируем результат в структуру
-	err := row.Scan(&state.UserID, &state.LastTheoryTaskID, &state.LastCodeTaskID, &state.LastTheoryAnswer, &state.LastCodeAnswer, pq.Array(&state.TheoryTags), pq.Array(&state.CodeTags), &state.LastAction, &state.UpdatedAt)
+	err := row.Scan(
+		&state.UserID,
+		&state.LastTheoryTaskID,
+		&state.LastCodeTaskID,
+		&state.LastTheoryAnswer,
+		&state.LastCodeAnswer,
+		pq.Array(&state.TheoryTags),
+		pq.Array(&state.CodeTags),
+		&state.LastAction,
+		&state.UpdatedAt,
+	)
+
 	if err != nil {
 		log.Printf("[Get] Error getting user_state for user_id=%d: %v", userID, err)
 		return nil, err

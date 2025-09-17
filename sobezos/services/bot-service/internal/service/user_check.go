@@ -7,10 +7,10 @@ import (
 )
 
 func (s *Service) UserCheck(telegramID int) (UserCheckResponse, bool) {
-	url := "http://user-service:8082/users/check?telegram_id=" + strconv.Itoa(telegramID)
+	url := "http://user-service:8082/usercheck?telegram_id=" + strconv.Itoa(telegramID)
 	resp, err := http.Get(url)
 	if err != nil {
-		return UserCheckResponse{}, false
+		return UserCheckResponse{}, false ///
 	}
 	defer resp.Body.Close()
 	var res UserCheckResponse

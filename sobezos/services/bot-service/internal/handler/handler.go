@@ -1,6 +1,7 @@
 package bot
 
 import (
+	"fmt"
 	"sobezos/services/bot-service/internal/service"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -35,9 +36,10 @@ func (h *Handler) HandleUpdate(update tgbotapi.Update, bot *tgbotapi.BotAPI) {
 
 // HandleCommand обрабатывает команды бота и возвращает текст ответа
 func (h *Handler) HandleCommand(cmd string, telegramID int, chatID int64, args string) string {
-	userInfo, exists := h.service.UserCheck(telegramID)
+	userInfo, exists := h.service.UserCheck(telegramID) // user-service query param telegram_id
 	if !exists {
-		return "⛔ Вы не авторизованы"
+		return fmt.Sprintf("⛔ Вы не авторизованы \n Обратитесь к администратору: \n /useradd %d <username> <role>\n", telegramID)
+		//INSERT INTO users (telegram_id, username, role) VALUES (<telegramID>, '<username>', 'admin');
 	}
 	//UserStateEdit используется только под капотом
 
