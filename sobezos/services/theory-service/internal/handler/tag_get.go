@@ -7,8 +7,7 @@ import (
 	"go.uber.org/zap"
 )
 
-// GetAllTags handles GET /tags
-func (h *TaskHandler) GetAllTags(w http.ResponseWriter, r *http.Request) {
+func (h *TaskHandler) TagGet(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		h.logger.Warn("Method not allowed", zap.String("method", r.Method))
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)

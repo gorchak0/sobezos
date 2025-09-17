@@ -11,10 +11,6 @@ type TaskHandler struct {
 	logger  *zap.Logger
 }
 
-func NewTaskHandler(service *service.TaskService) *TaskHandler {
-	return &TaskHandler{service: service, logger: zap.NewNop()}
-}
-
-func NewTaskHandlerWithLogger(service *service.TaskService, logger *zap.Logger) *TaskHandler {
+func NewTaskHandler(service *service.TaskService, logger *zap.Logger) *TaskHandler {
 	return &TaskHandler{service: service, logger: logger}
 }

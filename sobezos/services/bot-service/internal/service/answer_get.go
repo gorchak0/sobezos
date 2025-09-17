@@ -20,7 +20,7 @@ func (s *Service) AnswerGet(telegramID int) (string, error) {
 	}
 
 	//получение текста вопроса
-	url := "http://theory-service:8081/answer?task_id=" + taskID.(string)
+	url := "http://theory-service:8081/answerget?task_id=" + taskID.(string)
 	resp, err := http.Get(url)
 	if err != nil {
 		return "", err

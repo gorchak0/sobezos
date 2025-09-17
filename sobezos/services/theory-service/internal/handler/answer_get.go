@@ -9,7 +9,7 @@ import (
 )
 
 // GET /answer?task_id=...
-func (h *TaskHandler) GetTaskAnswer(w http.ResponseWriter, r *http.Request) {
+func (h *TaskHandler) AnswerGet(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		h.logger.Warn("Method not allowed", zap.String("method", r.Method))
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)

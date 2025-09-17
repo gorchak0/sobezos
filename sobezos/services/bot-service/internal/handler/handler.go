@@ -43,21 +43,21 @@ func (h *Handler) HandleCommand(cmd string, telegramID int, chatID int64, args s
 
 	// команды, доступные всем пользователям
 	commands := map[string]func() (string, error){
-		"taskget": func() (string, error) { return h.service.TaskGet(telegramID) },
-		//taskgetid todo
-		"answerget": func() (string, error) { return h.service.AnswerGet(telegramID) },
+		"taskget":   func() (string, error) { return h.service.TaskGet(telegramID) },         //theory-service
+		"taskgetid": func() (string, error) { return h.service.TaskGetID(telegramID, args) }, //theory-service query param task_id
+		"answerget": func() (string, error) { return h.service.AnswerGet(telegramID) },       //theory-service query param task_id
 		"statsget":  func() (string, error) { return "Статистика пока не реализована", nil },
-		"tagset":    func() (string, error) { return h.service.TagSet(telegramID, args) },
-		//tagsset без аргументов - tagsclear todo
-		//tagget todo
+		"tagset":    func() (string, error) { return h.service.TagSet(telegramID, args) }, //user-service query param user_id
+		"tagclear":  func() (string, error) { return h.service.TagClear(telegramID) },     // user-service query param user_id
+		"tagget":    func() (string, error) { return h.service.TagGet() },                 //theory-service
 	}
 
 	// команды только для админов
 	adminCommands := map[string]func() (string, error){
-		"useradd": func() (string, error) { return h.service.UserAdd(telegramID, args) },
+		"useradd": func() (string, error) { return h.service.UserAdd(telegramID, args) }, //user-service
 		//useredit todo
-		"taskadd":  func() (string, error) { return h.service.TaskAdd(args) },
-		"taskedit": func() (string, error) { return h.service.TaskEdit(args) },
+		"taskadd":  func() (string, error) { return h.service.TaskAdd(telegramID, args) },  //theory-service
+		"taskedit": func() (string, error) { return h.service.TaskEdit(telegramID, args) }, //theory-service
 	}
 
 	if fn, ok := commands[cmd]; ok {

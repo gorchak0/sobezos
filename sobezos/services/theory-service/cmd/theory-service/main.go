@@ -28,6 +28,8 @@ func main() {
 	defer db.Close()
 
 	migrations.Migrate(db, "internal/migrations/001_create_tasks_table.sql")
+	migrations.Migrate(db, "internal/migrations/002_create_answers_table.sql")
+	migrations.Migrate(db, "internal/migrations/003_create_users_table.sql")
 
 	logger, err := zap.NewProduction()
 	if err != nil {
@@ -37,12 +39,18 @@ func main() {
 
 	repo := repository.NewTaskRepository(db)
 	service := service.NewTaskService(repo)
-	handler := handler.NewTaskHandlerWithLogger(service, logger)
+	handler := handler.NewTaskHandler(service, logger)
 
-	http.HandleFunc("/taskget", handler.GetRandomTask)
-	http.HandleFunc("/taskadd", handler.CreateTask)
-	http.HandleFunc("/taskedit", handler.EditTask)
-	http.HandleFunc("/answerget", handler.GetTaskAnswer)
+	//для всех пользователей
+	http.HandleFunc("/taskget", handler.TaskGet)
+	http.HandleFunc("/taskgetid", handler.TaskGetID)
+	http.HandleFunc("/answerget", handler.AnswerGet)
+	http.HandleFunc("/tagget", handler.TagGet)
+
+	//для админов
+	http.HandleFunc("/taskadd", handler.TaskAdd)
+	http.HandleFunc("/taskedit", handler.TaskEdit)
+
 	logger.Info("theory-service listening on :8081")
 	log.Fatal(http.ListenAndServe(":8081", nil))
 }

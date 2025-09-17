@@ -7,8 +7,8 @@ import (
 	"go.uber.org/zap"
 )
 
-// CreateTask handles POST /task for adding a new task
-func (h *TaskHandler) CreateTask(w http.ResponseWriter, r *http.Request) {
+// TaskAdd handles POST /taskadd for adding a new task
+func (h *TaskHandler) TaskAdd(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		h.logger.Warn("Method not allowed", zap.String("method", r.Method))
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)

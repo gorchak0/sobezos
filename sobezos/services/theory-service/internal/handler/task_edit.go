@@ -7,8 +7,8 @@ import (
 	"go.uber.org/zap"
 )
 
-// EditTask handles PUT /edittask for updating a task
-func (h *TaskHandler) EditTask(w http.ResponseWriter, r *http.Request) {
+// TaskEdit handles PUT /taskedit for updating a task
+func (h *TaskHandler) TaskEdit(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPut {
 		h.logger.Warn("Method not allowed", zap.String("method", r.Method))
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)

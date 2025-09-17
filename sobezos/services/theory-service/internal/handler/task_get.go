@@ -3,11 +3,12 @@ package handler
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 
 	"go.uber.org/zap"
 )
 
-func (h *TaskHandler) GetRandomTask(w http.ResponseWriter, r *http.Request) {
+func (h *TaskHandler) TaskGet(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		h.logger.Warn("Method not allowed", zap.String("method", r.Method))
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -15,9 +16,20 @@ func (h *TaskHandler) GetRandomTask(w http.ResponseWriter, r *http.Request) {
 	}
 	h.logger.Info("Получен GET-запрос на задачу", zap.String("method", r.Method))
 
-	//тут обращение к user-states для получения тэгов пользователя
-	task, err := h.service.GetRandomTask()
-	if err != nil {
+	// Получаем тэги из query (?tags=...)
+	tagsParam := r.URL.Query().Get("tags")
+	var tags []string
+	if tagsParam != "" {
+		for _, t := range splitAndTrim(tagsParam, ",") {
+			if t != "" {
+				tags = append(tags, t)
+			}
+		}
+	}
+
+	// Получаем задачу с учётом тегов
+	task, err := h.service.GetRandomTask(tags)
+	if err != nil || task == nil {
 		h.logger.Error("Ошибка получения задачи из сервиса", zap.Error(err))
 		http.Error(w, "Failed to get task", http.StatusInternalServerError)
 		return
@@ -38,4 +50,14 @@ func (h *TaskHandler) GetRandomTask(w http.ResponseWriter, r *http.Request) {
 	} else {
 		h.logger.Info("Ответ успешно отправлен", zap.Any("response", response))
 	}
+}
+
+// splitAndTrim разбивает строку по разделителю и обрезает пробелы
+func splitAndTrim(s, sep string) []string {
+	var res []string
+	for _, part := range strings.Split(s, sep) {
+		trimmed := strings.TrimSpace(part)
+		res = append(res, trimmed)
+	}
+	return res
 }
