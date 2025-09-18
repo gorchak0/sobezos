@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -34,8 +35,8 @@ func (h *UserServiceHandler) PatchState(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	// Логируем JSON через fmt для отладки
-	//patchJson, _ := json.Marshal(patch)
-	//fmt.Printf("\n\n\nPatchState raw JSON: %s\n\n\n", string(patchJson))
+	patchJson, _ := json.Marshal(patch)
+	fmt.Printf("\n\n\nPatchState raw JSON: %s\n\n\n", string(patchJson))
 
 	h.Logger.Info("PatchState have JSON: ", zap.Any("patch", patch))
 
@@ -45,6 +46,10 @@ func (h *UserServiceHandler) PatchState(w http.ResponseWriter, r *http.Request) 
 		http.Error(w, "Failed to update state", http.StatusInternalServerError)
 		return
 	}
+
+	//getstate получаем и логгируем для отладки
+	state, _ := h.Service.GetState(userID)
+	fmt.Printf("\n\n\nPatchState new state: %+v\n\n\n", state)
 
 	// Логируем успешное обновление, возвращаем ok:true
 	h.Logger.Info("User state updated", zap.Int64("user_id", userID), zap.Any("patch", patch))

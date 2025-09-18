@@ -24,12 +24,14 @@ func (h *TaskHandler) TaskAdd(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
-	if err := h.service.CreateTask(req.Tags, req.Question, req.Answer); err != nil {
+	id, err := h.service.CreateTask(req.Tags, req.Question, req.Answer)
+	if err != nil {
 		h.logger.Error("Failed to create task", zap.Error(err))
 		http.Error(w, "Failed to create task", http.StatusInternalServerError)
 		return
 	}
-	h.logger.Info("Task created", zap.String("question", req.Question))
+	h.logger.Info("Task created", zap.String("question", req.Question), zap.Int("id", id))
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	w.Write([]byte(`{"status":"ok"}`))
+	json.NewEncoder(w).Encode(map[string]interface{}{"status": "ok", "id": id})
 }

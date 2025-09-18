@@ -21,6 +21,7 @@ type UserCheckResponse struct {
 }
 
 type TaskResponse struct {
+	Exist    int      `json:"exist"`
 	ID       int      `json:"id"`
 	Question string   `json:"question"`
 	Tags     []string `json:"tags"`

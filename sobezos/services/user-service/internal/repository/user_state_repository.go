@@ -23,15 +23,40 @@ func (r *UserStateRepository) Patch(userID int64, patch models.UserState) error 
 	args := []interface{}{}
 	idx := 1
 
-	//fmt.Printf("\n\n user-service - user_state_repository - patch.TheoryTags - %v\n", patch.TheoryTags)
-
+	if patch.LastTheoryTaskID != nil {
+		setParts = append(setParts, "last_theory_task_id=$"+strconv.Itoa(idx))
+		args = append(args, patch.LastTheoryTaskID)
+		idx++
+	}
+	if patch.LastCodeTaskID != nil {
+		setParts = append(setParts, "last_code_task_id=$"+strconv.Itoa(idx))
+		args = append(args, patch.LastCodeTaskID)
+		idx++
+	}
+	if patch.LastTheoryAnswer != nil {
+		setParts = append(setParts, "last_theory_answer=$"+strconv.Itoa(idx))
+		args = append(args, patch.LastTheoryAnswer)
+		idx++
+	}
+	if patch.LastCodeAnswer != nil {
+		setParts = append(setParts, "last_code_answer=$"+strconv.Itoa(idx))
+		args = append(args, patch.LastCodeAnswer)
+		idx++
+	}
 	if patch.TheoryTags != nil {
 		setParts = append(setParts, "theory_tags=$"+strconv.Itoa(idx))
 		args = append(args, pq.Array(patch.TheoryTags))
 		idx++
-		//fmt.Println("--- не равно nil ---")
-	} else {
-		//fmt.Println("--- равно nil ---")
+	}
+	if patch.CodeTags != nil {
+		setParts = append(setParts, "code_tags=$"+strconv.Itoa(idx))
+		args = append(args, pq.Array(patch.CodeTags))
+		idx++
+	}
+	if patch.LastAction != nil {
+		setParts = append(setParts, "last_action=$"+strconv.Itoa(idx))
+		args = append(args, patch.LastAction)
+		idx++
 	}
 
 	if len(setParts) == 0 {

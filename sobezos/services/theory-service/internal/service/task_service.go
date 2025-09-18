@@ -31,13 +31,14 @@ func (s *TaskService) GetRandomTask(tags []string) (*models.Task, error) {
 }
 
 // CreateTask creates a new task (бизнес-логика)
-func (s *TaskService) CreateTask(tags []string, question, answer string) error {
+func (s *TaskService) CreateTask(tags []string, question, answer string) (int, error) {
 	task := &models.Task{
 		Tags:      tags,
 		Question:  question,
 		Answer:    answer,
 		CreatedAt: time.Now(),
 	}
+
 	return s.repo.CreateTask(task)
 }
 

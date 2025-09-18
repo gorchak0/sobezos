@@ -27,15 +27,22 @@ func (h *TaskHandler) TaskGetID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	task, err := h.service.GetTaskByID(taskID)
+	exist := 1
 	if err != nil || task == nil {
 		h.logger.Error("Task not found or error", zap.Int("task_id", taskID), zap.Error(err))
-		http.Error(w, "Задача не найдена", http.StatusNotFound)
-		return
+		exist = 0
 	}
 	resp := map[string]interface{}{
-		"id":       task.ID,
-		"question": task.Question,
-		"tags":     task.Tags,
+		"exist":    exist,
+		"id":       0,
+		"question": "",
+		"tags":     []string{},
+	}
+
+	if exist == 1 {
+		resp["id"] = task.ID
+		resp["question"] = task.Question
+		resp["tags"] = task.Tags
 	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(resp)

@@ -30,6 +30,7 @@ func (h *Handler) HandleUpdate(update tgbotapi.Update, bot *tgbotapi.BotAPI) {
 	msgText := h.HandleCommand(cmd, telegramID, chatID, args)
 	if msgText != "" {
 		msg := tgbotapi.NewMessage(chatID, msgText)
+		//msg.ParseMode = "Markdown" // или "MarkdownV2"
 		bot.Send(msg)
 	}
 }
@@ -52,6 +53,8 @@ func (h *Handler) HandleCommand(cmd string, telegramID int, chatID int64, args s
 		"tagset":    func() (string, error) { return h.service.TagSet(telegramID, args) }, //user-service query param user_id
 		"tagclear":  func() (string, error) { return h.service.TagClear(telegramID) },     // user-service query param user_id
 		"tagget":    func() (string, error) { return h.service.TagGet() },                 //theory-service
+		"help":      func() (string, error) { return help() },
+		"start":     func() (string, error) { return help() },
 	}
 
 	// команды только для админов
@@ -82,4 +85,21 @@ func (h *Handler) HandleCommand(cmd string, telegramID int, chatID int64, args s
 	}
 
 	return "❓ Неизвестная команда"
+}
+
+func help() (string, error) {
+	return `
+Доступно всем пользователям:
+/taskget — Получить случайную задачу (с учётом ваших тегов, если заданы)
+/taskgetid <id> — Получить задачу по её номеру (id)
+/answerget — Получить ответ на последнюю полученную задачу
+/statsget — Показать статистику (пока не реализовано)
+/tagset <тег1, тег2,...> — Добавить теги для фильтрации задач (например: /tagset динамика, графы)
+/tagclear — Очистить все ваши теги
+/tagget — Показать список всех доступных тегов с описаниями
+
+Только для администраторов:
+/useradd <id> <username> — Добавить пользователя (в user-service)
+/taskadd <json> — Добавить новую задачу (в theory-service, формат — JSON)
+/taskedit <json> — Редактировать задачу (в theory-service, формат — JSON)`, nil
 }

@@ -3,6 +3,7 @@ package service
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"strconv"
@@ -17,6 +18,13 @@ func (s *Service) TaskAdd(telegramID int, args string) (string, error) {
 	if err := json.Unmarshal([]byte(args), &reqBody); err != nil {
 		s.logger.Error("Некорректный JSON задачи", zap.Error(err))
 		return "Некорректный JSON задачи", err
+	}
+
+	// --- Логируем распарсенный answer ---
+	if ans, ok := reqBody["answer"].(string); ok {
+		fmt.Printf("\n\n\nПосле Unmarshal, answer = %s\n", ans)
+	} else {
+		fmt.Printf("\n\n\nПосле Unmarshal, answer не найден или не строка\n")
 	}
 
 	// Получаем username пользователя
@@ -46,6 +54,10 @@ func (s *Service) TaskAdd(telegramID int, args string) (string, error) {
 		return "Ошибка формирования задачи", err
 	}
 
+	// --- Логируем JSON перед отправкой ---
+
+	fmt.Printf("\n\n\nПеред отправкой в theory-service, JSON = %s\n", string(newJson))
+
 	// Эндпоинт
 	url := "http://theory-service:8081/taskadd"
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(newJson))
@@ -62,8 +74,15 @@ func (s *Service) TaskAdd(telegramID int, args string) (string, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusCreated {
-		// Можно сохранить состояние пользователя, если нужно
-		return "Задача успешно добавлена", nil
+		var respData struct {
+			Status string `json:"status"`
+			ID     int    `json:"id"`
+		}
+		if err := json.NewDecoder(resp.Body).Decode(&respData); err != nil {
+			s.logger.Error("Ошибка декодирования ответа theory-service", zap.Error(err))
+			return "Задача добавлена, но не удалось получить id", nil
+		}
+		return "Задача успешно добавлена. Номер задачи: " + strconv.Itoa(respData.ID), nil
 	}
 	respMsg, _ := io.ReadAll(resp.Body)
 	s.logger.Error("theory-service вернул ошибку при добавлении задачи", zap.Int("status", resp.StatusCode), zap.String("body", string(respMsg)))

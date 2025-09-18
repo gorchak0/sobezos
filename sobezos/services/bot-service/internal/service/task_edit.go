@@ -12,7 +12,7 @@ import (
 
 // SendEditTask отправляет PUT-запрос на theory-service для редактирования задачи
 func (s *Service) TaskEdit(telegramID int, jsonText string) (string, error) {
-	url := "http://theory-service:8081/edittask"
+	url := "http://theory-service:8081/taskedit"
 
 	// Проверяем наличие id в полученном json
 	var reqBody map[string]interface{}

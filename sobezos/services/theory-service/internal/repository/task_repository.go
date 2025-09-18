@@ -34,10 +34,10 @@ func (r *TaskRepository) GetRandomTaskRow(tags []string) (*models.Task, error) {
 	return task, nil
 }
 
-func (r *TaskRepository) CreateTask(task *models.Task) error {
+func (r *TaskRepository) CreateTask(task *models.Task) (int, error) {
 	tx, err := r.DB.Begin()
 	if err != nil {
-		return err
+		return 0, err
 	}
 	defer tx.Rollback()
 
@@ -48,7 +48,7 @@ func (r *TaskRepository) CreateTask(task *models.Task) error {
 		task.Question, task.Answer, task.CreatedAt,
 	).Scan(&taskID)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	// Добавляем связи с тегами
@@ -60,17 +60,20 @@ func (r *TaskRepository) CreateTask(task *models.Task) error {
 			tagName,
 		).Scan(&tagID)
 		if err != nil {
-			return err
+			return 0, err
 		}
 
 		// Создаём запись в task_tags
 		_, err = tx.Exec(`INSERT INTO task_tags (task_id, tag_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`, taskID, tagID)
 		if err != nil {
-			return err
+			return 0, err
 		}
 	}
 
-	return tx.Commit()
+	if err := tx.Commit(); err != nil {
+		return 0, err
+	}
+	return taskID, nil
 }
 
 func (r *TaskRepository) UpdateTask(task *models.Task) error {

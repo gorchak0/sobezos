@@ -56,10 +56,16 @@ func (s *Service) TaskGet(telegramID int) (string, error) {
 	}
 
 	// Сохраняем состояние пользователя
+
+	//fmt.Printf("\n\n\n!!!Сохраняем состояние пользователя: %d, %d\n\n\n\n", state.UserID, telegramID)
+
 	s.UserStateEdit(telegramID, models.UserState{
+		UserID:           state.UserID,
 		LastTheoryTaskID: task.ID,
 		LastAction:       "get_task",
+		LastTheoryAnswer: "", //
 	})
+
 	tagsText := ""
 	if len(task.Tags) > 0 {
 		tagsText = "Теги: " + strings.Join(task.Tags, ", ") + "\n"

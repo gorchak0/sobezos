@@ -2,9 +2,12 @@ package service
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
+	"sobezos/services/bot-service/internal/models"
 	"strconv"
+	"strings"
 
 	"go.uber.org/zap"
 )
@@ -45,18 +48,20 @@ func (s *Service) TaskGetID(telegramID int, args string) (string, error) {
 		return "⚠️ Сервис временно недоступен", ErrServiceUnavailable
 	}
 
-	tagsText := ""
-	if len(task.Tags) > 0 {
-		tagsText = "Теги: " + "\n" + "- " + (func(tags []string) string {
-			res := ""
-			for i, t := range tags {
-				if i > 0 {
-					res += ", "
-				}
-				res += t
-			}
-			return res
-		})(task.Tags) + "\n"
+	if task.Exist == 0 {
+		return "Задача с таким id не найдена", nil
 	}
-	return "Задача №" + strconv.Itoa(task.ID) + ":\n" + task.Question + "\n" + tagsText, nil
+
+	s.UserStateEdit(telegramID, models.UserState{
+		UserID:           int64(telegramID),
+		LastTheoryTaskID: task.ID,
+		LastAction:       "get_task",
+		LastTheoryAnswer: "", //
+	})
+
+	var tagsText string
+	if len(task.Tags) > 0 {
+		tagsText = "Теги:\n- " + strings.Join(task.Tags, ", ") + "\n"
+	}
+	return fmt.Sprintf("Задача №%d:\n%s\n%s", task.ID, task.Question, tagsText), nil
 }
