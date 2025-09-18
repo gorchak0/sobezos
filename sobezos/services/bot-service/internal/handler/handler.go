@@ -30,7 +30,7 @@ func (h *Handler) HandleUpdate(update tgbotapi.Update, bot *tgbotapi.BotAPI) {
 	msgText := h.HandleCommand(cmd, telegramID, chatID, args)
 	if msgText != "" {
 		msg := tgbotapi.NewMessage(chatID, msgText)
-		//msg.ParseMode = "Markdown" // или "MarkdownV2"
+		//msg.ParseMode = "MarkdownV2" // или "MarkdownV2"
 		bot.Send(msg)
 	}
 }

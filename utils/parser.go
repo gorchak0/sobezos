@@ -59,7 +59,7 @@ func main() {
 				tasks = append(tasks, Task{
 					Tags:     []string{hardcodedTag},
 					Question: currentQuestion,
-					Answer:   strings.Join(currentAnswer, "\n"),
+					Answer:   strings.ReplaceAll(strings.Join(currentAnswer, "\n"), "\n", "\n\n"),
 				})
 			}
 
@@ -84,7 +84,7 @@ func main() {
 		tasks = append(tasks, Task{
 			Tags:     []string{hardcodedTag},
 			Question: currentQuestion,
-			Answer:   strings.Join(currentAnswer, "\n"),
+			Answer:   strings.ReplaceAll(strings.Join(currentAnswer, "\n"), "\n", "\n\n"),
 		})
 	}
 
