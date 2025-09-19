@@ -1,0 +1,5 @@
+# Ignore environment files
+sobezos/services/bot-service/.env
+# Ignore database theory and tasks files
+sobezos/utils/мод.4 БД.md
+sobezos/utils/tasks/
