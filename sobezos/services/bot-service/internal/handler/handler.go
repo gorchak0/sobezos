@@ -39,7 +39,7 @@ func (h *Handler) HandleUpdate(update tgbotapi.Update, bot *tgbotapi.BotAPI) {
 func (h *Handler) HandleCommand(cmd string, telegramID int, chatID int64, args string) string {
 	userInfo, exists := h.service.UserCheck(telegramID) // user-service query param telegram_id
 	if !exists {
-		return fmt.Sprintf("⛔ Вы не авторизованы \n Обратитесь к администратору: \n /useradd %d <username> <role>\n", telegramID)
+		return fmt.Sprintf("⛔ Вы не авторизованы \nПерешлите это сообщение администратору чтобы он вас добавил: \n /useradd %d <username> <role>\nАдмин: @sorokinengineer", telegramID)
 		//INSERT INTO users (telegram_id, username, role) VALUES (<telegramID>, '<username>', 'admin');
 	}
 	//UserStateEdit используется только под капотом

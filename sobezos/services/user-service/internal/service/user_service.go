@@ -3,6 +3,7 @@ package service
 import (
 	"sobezos/services/user-service/internal/repository"
 	"sobezos/services/user-service/pkg/models"
+	"time"
 )
 
 type UserService struct {
@@ -29,7 +30,27 @@ func (s *UserService) AddUser(user models.User) error {
 	if s.UserRepo.Exists(user.TelegramID) {
 		return repository.ErrUserExists
 	}
-	return s.UserRepo.Add(user)
+	err := s.UserRepo.Add(user)
+	if err != nil {
+		return err
+	}
+	// Создать запись в user_state с полями по умолчанию через Add
+	now := time.Now()
+	defaultState := models.UserState{
+		UserID:           user.TelegramID,
+		LastTheoryTaskID: nil,
+		LastCodeTaskID:   nil,
+		LastTheoryAnswer: nil,
+		LastCodeAnswer:   nil,
+		TheoryTags:       []string{},
+		CodeTags:         []string{},
+		LastAction:       nil,
+		UpdatedAt:        &now,
+	}
+	if err := s.StateRepo.AddState(defaultState); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (s *UserService) GetState(userID int64) (interface{}, error) {

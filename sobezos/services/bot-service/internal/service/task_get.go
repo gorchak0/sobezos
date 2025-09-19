@@ -60,7 +60,7 @@ func (s *Service) TaskGet(telegramID int) (string, error) {
 	//fmt.Printf("\n\n\n!!!Сохраняем состояние пользователя: %d, %d\n\n\n\n", state.UserID, telegramID)
 
 	s.UserStateEdit(telegramID, models.UserState{
-		UserID:           state.UserID,
+		UserID:           int64(telegramID),
 		LastTheoryTaskID: task.ID,
 		LastAction:       "get_task",
 		LastTheoryAnswer: "", //

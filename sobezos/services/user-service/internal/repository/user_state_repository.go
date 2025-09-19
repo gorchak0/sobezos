@@ -114,3 +114,27 @@ func (r *UserStateRepository) Get(userID int64) (*models.UserState, error) {
 	log.Printf("[Get] Successfully got user_state for user_id=%d: %+v", userID, state)
 	return &state, nil
 }
+
+// AddState создает новую запись user_state для пользователя
+func (r *UserStateRepository) AddState(state models.UserState) error {
+	query := `INSERT INTO user_states (
+		user_id, last_theory_task_id, last_code_task_id, last_theory_answer, last_code_answer, theory_tags, code_tags, last_action, updated_at
+	) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`
+	_, err := r.DB.Exec(query,
+		state.UserID,
+		state.LastTheoryTaskID,
+		state.LastCodeTaskID,
+		state.LastTheoryAnswer,
+		state.LastCodeAnswer,
+		pq.Array(state.TheoryTags),
+		pq.Array(state.CodeTags),
+		state.LastAction,
+		state.UpdatedAt,
+	)
+	if err != nil {
+		log.Printf("[Add] Error inserting user_state for user_id=%d: %v", state.UserID, err)
+		return err
+	}
+	log.Printf("[Add] Successfully inserted user_state for user_id=%d", state.UserID)
+	return nil
+}
