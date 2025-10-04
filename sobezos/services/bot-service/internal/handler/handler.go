@@ -55,14 +55,15 @@ func (h *Handler) HandleCommand(cmd string, telegramID int, chatID int64, args s
 		"tagget":    func() (string, error) { return h.service.TagGet() },                 //theory-service
 		"help":      func() (string, error) { return help() },
 		"start":     func() (string, error) { return help() },
+		"taskadd":   func() (string, error) { return h.service.TaskAdd(telegramID, args) },  //theory-service
+		"taskedit":  func() (string, error) { return h.service.TaskEdit(telegramID, args) }, //theory-service
 	}
 
 	// команды только для админов
 	adminCommands := map[string]func() (string, error){
 		"useradd": func() (string, error) { return h.service.UserAdd(telegramID, args) }, //user-service
 		//useredit todo
-		"taskadd":  func() (string, error) { return h.service.TaskAdd(telegramID, args) },  //theory-service
-		"taskedit": func() (string, error) { return h.service.TaskEdit(telegramID, args) }, //theory-service
+
 	}
 
 	if fn, ok := commands[cmd]; ok {
@@ -97,9 +98,10 @@ func help() (string, error) {
 /tagset <тег1, тег2,...> — Добавить теги для фильтрации задач (например: /tagset динамика, графы)
 /tagclear — Очистить все ваши теги
 /tagget — Показать список всех доступных тегов с описаниями
+/taskadd <json> — Добавить новую задачу 
+/taskedit <json> — Редактировать задачу 
 
 Только для администраторов:
-/useradd <id> <username> — Добавить пользователя (в user-service)
-/taskadd <json> — Добавить новую задачу (в theory-service, формат — JSON)
-/taskedit <json> — Редактировать задачу (в theory-service, формат — JSON)`, nil
+/useradd <id> <username> — Добавить пользователя
+`, nil
 }
