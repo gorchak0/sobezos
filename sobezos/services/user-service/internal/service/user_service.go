@@ -39,11 +39,8 @@ func (s *UserService) AddUser(user models.User) error {
 	defaultState := models.UserState{
 		UserID:           user.TelegramID,
 		LastTheoryTaskID: nil,
-		LastCodeTaskID:   nil,
-		LastTheoryAnswer: nil,
-		LastCodeAnswer:   nil,
 		TheoryTags:       []string{},
-		CodeTags:         []string{},
+		CompletedTheoryTasks: []string{},
 		LastAction:       nil,
 		UpdatedAt:        &now,
 	}

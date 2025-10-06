@@ -1,30 +1,40 @@
 package service
 
 import (
-	"errors"
-
 	"go.uber.org/zap"
 )
 
+type ServiceInterface interface {
+	Help() (string, error)
+	TaskGet(telegramID int) (string, error)
+	TaskGetID(telegramID int, args string) (string, error)
+	AnswerGet(telegramID int) (string, error)
+	TagSet(telegramID int, args string) (string, error)
+	TagClear(telegramID int) (string, error)
+	TagGet() (string, error)
+	TaskAdd(telegramID int, args string) (string, error)
+	TaskEdit(telegramID int, args string) (string, error)
+	UserAdd(telegramID int, args string) (string, error)
+	UserCheck(telegramID int) (userInfo struct{ Username, Role string }, exists bool)
+	StatsGet(telegramID int) (string, error)
+}
+
 type Service struct {
-	logger *zap.Logger
+	Logger         *zap.Logger
+	CoreServiceUrl string
 }
 
-func NewService(logger *zap.Logger) *Service {
-	return &Service{logger: logger}
+func NewService(logger *zap.Logger) ServiceInterface {
+	return &Service{
+		Logger:         logger,
+		CoreServiceUrl: "http://core-service:8083",
+	}
 }
 
-type UserCheckResponse struct {
-	Exists   bool   `json:"exists"`
-	Role     string `json:"role,omitempty"`
-	Username string `json:"username,omitempty"`
+type commonSuccessResponse struct {
+	Result string `json:"result"`
 }
-
-type TaskResponse struct {
-	Exist    int      `json:"exist"`
-	ID       int      `json:"id"`
-	Question string   `json:"question"`
-	Tags     []string `json:"tags"`
+type userCheckResponse struct {
+	Role     string `json:"role"`
+	Username string `json:"username"`
 }
-
-var ErrServiceUnavailable = errors.New("theory-service unavailable")

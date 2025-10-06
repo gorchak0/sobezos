@@ -1,5 +1,5 @@
-FROM golang:1.21-alpine
+FROM golang:1.24-alpine
 WORKDIR /app
 COPY . .
-RUN go build -o bot-service ./cmd/bot-service
+RUN go build -o bot-service ./cmd
 CMD ["./bot-service"]

@@ -3,61 +3,45 @@ package service
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
-	"sobezos/services/bot-service/internal/models"
-	"strconv"
-	"strings"
 
 	"go.uber.org/zap"
 )
 
-func (s *Service) UserAdd(TelegramID int, args string) (string, error) {
-
-	parts := strings.Fields(args)
-	if len(parts) < 3 {
-		s.logger.Warn("Недостаточно аргументов для добавления пользователя", zap.String("args", args))
-		return "Используйте: /add <telegram_id> <username> <role>", ErrServiceUnavailable
-	}
-	newID, err := strconv.ParseInt(parts[0], 10, 64)
-	if err != nil {
-		s.logger.Warn("Некорректный telegram_id", zap.String("telegram_id", parts[0]), zap.Error(err))
-		return "Некорректный telegram_id", ErrServiceUnavailable
-	}
-	username := parts[1]
-	role := parts[2]
-	s.logger.Info("Попытка добавить пользователя", zap.Int64("new_telegram_id", newID), zap.String("username", username), zap.String("role", role), zap.Int("admin_telegram_id", TelegramID))
-
-	user := models.User{
-		TelegramID: newID,
-		Username:   username,
-		Role:       role,
-	}
-
-	url := "http://user-service:8082/useradd"
-	body, err := json.Marshal(user)
-	if err != nil {
-		s.logger.Error("Ошибка маршалинга пользователя", zap.Any("user", user), zap.Error(err))
-		return "Ошибка формирования запроса", ErrServiceUnavailable
-	}
-	req, err := http.NewRequest("POST", url, bytes.NewReader(body))
-	if err != nil {
-		s.logger.Error("Ошибка создания запроса к user-service", zap.Error(err))
-		return "Ошибка запроса к user-service", ErrServiceUnavailable
-	}
+func (s *Service) UserAdd(telegramID int, args string) (string, error) {
+	s.Logger.Info("UserAdd called", zap.Int("admin_telegram_id", telegramID), zap.String("args", args))
+	url := fmt.Sprintf("%s/useradd?telegram_id=%d", s.CoreServiceUrl, telegramID)
+	reqBody, _ := json.Marshal(map[string]string{"args": args})
+	req, _ := http.NewRequest("POST", url, bytes.NewBuffer(reqBody))
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-Admin-Telegram-ID", strconv.Itoa(TelegramID))
+
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		s.logger.Error("Ошибка отправки запроса к user-service", zap.Error(err))
-		return "Ошибка запроса к user-service", ErrServiceUnavailable
+		s.Logger.Error("UserAdd: http.Do error", zap.Error(err))
+		return "", err
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode == http.StatusCreated {
-		s.logger.Info("Пользователь успешно добавлен", zap.Any("user", user))
-		return "Пользователь успешно добавлен", nil
+	body, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode != 200 { //
+		s.Logger.Error("UserAdd: non-200 response", zap.Int("status", resp.StatusCode), zap.ByteString("body", body))
+
+		// Парсим JSON и извлекаем только сообщение об ошибке
+		var errorResp struct {
+			Error string `json:"error"`
+		}
+		if err := json.Unmarshal(body, &errorResp); err == nil && errorResp.Error != "" {
+			return "", fmt.Errorf(errorResp.Error) // Вернет только "Используйте: /add <telegram\_id> <username> <role>"
+		}
+
+		return "", fmt.Errorf("service unavailable")
 	}
-	respMsg, _ := io.ReadAll(resp.Body)
-	s.logger.Warn("user-service вернул ошибку при добавлении пользователя", zap.Int("status", resp.StatusCode), zap.String("body", string(respMsg)), zap.Any("user", user))
-	return "Ошибка: " + string(respMsg), ErrServiceUnavailable
+	var res commonSuccessResponse
+	if err := json.Unmarshal(body, &res); err != nil {
+		s.Logger.Error("UserAdd: json.Unmarshal error", zap.Error(err))
+		return "", err
+	}
+	s.Logger.Info("UserAdd: success", zap.String("result", res.Result))
+	return res.Result, nil
 }

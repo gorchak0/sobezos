@@ -4,6 +4,7 @@ import (
 	"os"
 	"sobezos/services/bot-service/internal/config"
 	handler "sobezos/services/bot-service/internal/handler"
+	service "sobezos/services/bot-service/internal/service"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"go.uber.org/zap"
@@ -29,9 +30,11 @@ func main() {
 	u.Timeout = 60
 
 	updates := botAPI.GetUpdatesChan(u)
-	handler := handler.NewHandler(logger)
+
+	svc := service.NewService(logger)
+	h := handler.NewHandler(logger, svc)
 
 	for update := range updates {
-		handler.HandleUpdate(update, botAPI)
+		h.HandleUpdate(update, botAPI)
 	}
 }

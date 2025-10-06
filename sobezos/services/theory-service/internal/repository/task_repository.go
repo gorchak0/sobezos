@@ -2,6 +2,7 @@ package repository
 
 import (
 	"database/sql"
+	"fmt"
 	"sobezos/services/theory-service/pkg/models"
 
 	"github.com/lib/pq"
@@ -19,7 +20,10 @@ func NewTaskRepository(db *sql.DB) *TaskRepository {
 // GetRandomTaskRow возвращает случайную задачу (без тегов)
 func (r *TaskRepository) GetRandomTaskRow(tags []string) (*models.Task, error) {
 	task := &models.Task{}
+
+	fmt.Printf("\n\ntheory-service repo TaskGet %s \n", tags)
 	if len(tags) == 0 {
+
 		row := r.DB.QueryRow(`SELECT t.id, t.question, t.answer, t.created_at FROM tasks t ORDER BY RANDOM() LIMIT 1`)
 		if err := row.Scan(&task.ID, &task.Question, &task.Answer, &task.CreatedAt); err != nil {
 			return nil, err

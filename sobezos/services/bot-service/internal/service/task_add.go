@@ -6,85 +6,52 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strconv"
 
 	"go.uber.org/zap"
 )
 
-// SendAddTask отправляет задачу в theory-service
 func (s *Service) TaskAdd(telegramID int, args string) (string, error) {
-	// Парсим JSON задачи
-	var reqBody map[string]interface{}
-	if err := json.Unmarshal([]byte(args), &reqBody); err != nil {
-		s.logger.Error("Некорректный JSON задачи", zap.Error(err))
-		return "Некорректный JSON задачи", err
-	}
+	s.Logger.Info("TaskAdd called", zap.Int("telegram_id", telegramID), zap.String("args", args))
 
-	// --- Логируем распарсенный answer ---
-	if ans, ok := reqBody["answer"].(string); ok {
-		fmt.Printf("\n\n\nПосле Unmarshal, answer = %s\n", ans)
-	} else {
-		fmt.Printf("\n\n\nПосле Unmarshal, answer не найден или не строка\n")
-	}
-
-	// Получаем username пользователя
-	userInfo, exists := s.UserCheck(telegramID)
-	var tag string
-	if exists && userInfo.Username != "" {
-		tag = "@" + userInfo.Username
-	} else {
-		tag = "user:" + strconv.Itoa(telegramID)
-	}
-
-	// Добавляем тег
-	tagsIface, ok := reqBody["tags"].([]interface{})
-	var tags []interface{}
-	if ok {
-		tags = tagsIface
-	} else {
-		tags = []interface{}{}
-	}
-	tags = append(tags, tag)
-	reqBody["tags"] = tags
-
-	// Формируем JSON
-	newJson, err := json.Marshal(reqBody)
+	requiredFields := []string{"question", "answer", "tags"}
+	taskData, err := parseTaskMessage(args, requiredFields)
 	if err != nil {
-		s.logger.Error("Ошибка формирования задачи", zap.Error(err))
-		return "Ошибка формирования задачи", err
+		s.Logger.Error("TaskAdd: parseTaskMessage error", zap.Error(err))
+		return "", err
 	}
+	fmt.Printf("\n\nTaskAdd: parsed taskData: %+v\n", taskData)
 
-	// --- Логируем JSON перед отправкой ---
-
-	fmt.Printf("\n\n\nПеред отправкой в theory-service, JSON = %s\n", string(newJson))
-
-	// Эндпоинт
-	url := "http://theory-service:8081/taskadd"
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(newJson))
+	jsonBody, err := json.Marshal(taskData)
 	if err != nil {
-		s.logger.Error("Ошибка формирования запроса к theory-service", zap.Error(err))
-		return "Ошибка формирования запроса к theory-service", err
+		s.Logger.Error("TaskAdd: json.Marshal error", zap.Error(err))
+		return "", err
 	}
+
+	fmt.Printf("\n\nTaskAdd: marshaled jsonBody: %s\n", jsonBody)
+
+	url := fmt.Sprintf("%s/taskadd?telegram_id=%d", s.CoreServiceUrl, telegramID)
+	req, _ := http.NewRequest("POST", url, bytes.NewBuffer(jsonBody))
 	req.Header.Set("Content-Type", "application/json")
+
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		s.logger.Error("Ошибка запроса к theory-service", zap.Error(err))
-		return "Ошибка запроса к theory-service", err
+		s.Logger.Error("TaskAdd: http.Do error", zap.Error(err))
+		return "", err
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode == http.StatusCreated {
-		var respData struct {
-			Status string `json:"status"`
-			ID     int    `json:"id"`
-		}
-		if err := json.NewDecoder(resp.Body).Decode(&respData); err != nil {
-			s.logger.Error("Ошибка декодирования ответа theory-service", zap.Error(err))
-			return "Задача добавлена, но не удалось получить id", nil
-		}
-		return "Задача успешно добавлена. Номер задачи: " + strconv.Itoa(respData.ID), nil
+	body, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode != 200 {
+		s.Logger.Error("TaskAdd: non-200 response", zap.Int("status", resp.StatusCode), zap.ByteString("body", body))
+		return "", fmt.Errorf("core-service error: %s", string(body))
 	}
-	respMsg, _ := io.ReadAll(resp.Body)
-	s.logger.Error("theory-service вернул ошибку при добавлении задачи", zap.Int("status", resp.StatusCode), zap.String("body", string(respMsg)))
-	return "Ошибка: " + string(respMsg), ErrServiceUnavailable
+
+	var res commonSuccessResponse
+	if err := json.Unmarshal(body, &res); err != nil {
+		s.Logger.Error("TaskAdd: json.Unmarshal error", zap.Error(err))
+		return "", err
+	}
+
+	s.Logger.Info("TaskAdd: success", zap.String("result", res.Result))
+	return res.Result, nil
 }

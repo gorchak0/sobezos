@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -26,6 +27,8 @@ func (h *TaskHandler) TaskGet(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
+
+	fmt.Printf("\n\ntheory-service  TaskGet %s \n", tags)
 	//
 	// Получаем задачу с учётом тегов
 	task, err := h.service.GetRandomTask(tags)

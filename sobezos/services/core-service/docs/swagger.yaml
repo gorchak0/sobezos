@@ -1,0 +1,365 @@
+basePath: /
+definitions:
+  models.CommonErrorResponse:
+    properties:
+      error:
+        type: string
+    type: object
+  models.CommonSuccessResponse:
+    properties:
+      result:
+        type: string
+    type: object
+  models.TagClearRequest:
+    properties:
+      telegram_id:
+        type: integer
+    type: object
+  models.TagSetRequest:
+    properties:
+      args:
+        type: string
+    type: object
+  models.TaskAddRequest:
+    properties:
+      answer:
+        type: string
+      question:
+        type: string
+      tags:
+        items:
+          type: string
+        type: array
+    type: object
+  models.TaskEditRequest:
+    properties:
+      answer:
+        type: string
+      question:
+        type: string
+      tags:
+        items:
+          type: string
+        type: array
+    type: object
+  models.UserAddRequest:
+    properties:
+      args:
+        type: string
+    type: object
+  models.UserCheckResponse:
+    properties:
+      role:
+        type: string
+      username:
+        type: string
+    type: object
+host: localhost:8083
+info:
+  contact: {}
+  description: Это пример API с использованием Swaggo
+  title: SOBEZOS API
+  version: "1.0"
+paths:
+  /answerget:
+    get:
+      description: Возвращает ответ на последний теоретический вопрос пользователя
+      parameters:
+      - description: Telegram ID пользователя
+        in: query
+        name: telegram_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.CommonSuccessResponse'
+        "400":
+          description: invalid telegram_id
+          schema:
+            $ref: '#/definitions/models.CommonErrorResponse'
+        "500":
+          description: internal error
+          schema:
+            $ref: '#/definitions/models.CommonErrorResponse'
+      summary: Получить ответ на последний вопрос пользователя
+      tags:
+      - answer
+  /tagclear:
+    post:
+      consumes:
+      - application/json
+      description: Очищает все теги пользователя
+      parameters:
+      - description: Telegram ID пользователя
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/models.TagClearRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.CommonSuccessResponse'
+        "400":
+          description: invalid body
+          schema:
+            $ref: '#/definitions/models.CommonErrorResponse'
+        "500":
+          description: internal error
+          schema:
+            $ref: '#/definitions/models.CommonErrorResponse'
+      summary: Очистить теги пользователя
+      tags:
+      - tag
+  /tagget:
+    get:
+      description: Получает список всех доступных тегов
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.CommonSuccessResponse'
+        "500":
+          description: internal error
+          schema:
+            $ref: '#/definitions/models.CommonErrorResponse'
+      summary: Получить список тегов
+      tags:
+      - tag
+  /tagset:
+    post:
+      consumes:
+      - application/json
+      description: Добавляет новые теги пользователю (требуется telegram_id в заголовке)
+      parameters:
+      - description: Telegram ID пользователя
+        in: query
+        name: telegram_id
+        required: true
+        type: integer
+      - description: Список тегов через запятую
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/models.TagSetRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.CommonSuccessResponse'
+        "400":
+          description: invalid telegram_id
+          schema:
+            $ref: '#/definitions/models.CommonErrorResponse'
+        "500":
+          description: internal error
+          schema:
+            $ref: '#/definitions/models.CommonErrorResponse'
+      summary: Установить теги пользователю
+      tags:
+      - tag
+  /taskadd:
+    post:
+      consumes:
+      - application/json
+      description: Добавляет новую задачу (требуется telegram_id в заголовке)
+      parameters:
+      - description: Telegram ID пользователя
+        in: query
+        name: telegram_id
+        required: true
+        type: integer
+      - description: JSON задачи
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/models.TaskAddRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.CommonSuccessResponse'
+        "400":
+          description: invalid telegram_id
+          schema:
+            $ref: '#/definitions/models.CommonErrorResponse'
+        "500":
+          description: internal error
+          schema:
+            $ref: '#/definitions/models.CommonErrorResponse'
+      summary: Добавить задачу
+      tags:
+      - task
+  /taskedit:
+    put:
+      consumes:
+      - application/json
+      description: Редактирует существующую задачу (требуется telegram_id в заголовке)
+      parameters:
+      - description: Telegram ID пользователя
+        in: query
+        name: telegram_id
+        required: true
+        type: integer
+      - description: JSON задачи для редактирования
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/models.TaskEditRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.CommonSuccessResponse'
+        "400":
+          description: invalid telegram_id
+          schema:
+            $ref: '#/definitions/models.CommonErrorResponse'
+        "500":
+          description: internal error
+          schema:
+            $ref: '#/definitions/models.CommonErrorResponse'
+      summary: Редактировать задачу
+      tags:
+      - task
+  /taskget:
+    get:
+      description: Получает задачу для пользователя с учетом его тегов
+      parameters:
+      - description: Telegram ID пользователя
+        in: query
+        name: telegram_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.CommonSuccessResponse'
+        "400":
+          description: invalid telegram_id
+          schema:
+            $ref: '#/definitions/models.CommonErrorResponse'
+        "500":
+          description: internal error
+          schema:
+            $ref: '#/definitions/models.CommonErrorResponse'
+      summary: Получить задачу
+      tags:
+      - task
+  /taskgetid:
+    get:
+      description: Получает задачу по её ID для пользователя
+      parameters:
+      - description: Telegram ID пользователя
+        in: query
+        name: telegram_id
+        required: true
+        type: integer
+      - description: ID задачи
+        in: query
+        name: args
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.CommonSuccessResponse'
+        "400":
+          description: invalid telegram_id
+          schema:
+            $ref: '#/definitions/models.CommonErrorResponse'
+        "500":
+          description: internal error
+          schema:
+            $ref: '#/definitions/models.CommonErrorResponse'
+      summary: Получить задачу по ID
+      tags:
+      - task
+  /useradd:
+    post:
+      consumes:
+      - application/json
+      description: Добавляет нового пользователя (требуется telegram_id администратора
+        в заголовке)
+      parameters:
+      - description: Telegram ID пользователя
+        in: query
+        name: telegram_id
+        required: true
+        type: integer
+      - description: Аргументы для добавления пользователя
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/models.UserAddRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.CommonSuccessResponse'
+        "400":
+          description: invalid admin telegram_id
+          schema:
+            $ref: '#/definitions/models.CommonErrorResponse'
+        "500":
+          description: internal error
+          schema:
+            $ref: '#/definitions/models.CommonErrorResponse'
+      summary: Добавить пользователя
+      tags:
+      - user
+  /usercheck:
+    get:
+      description: Проверяет существование пользователя и возвращает его роль и username
+      parameters:
+      - description: Telegram ID пользователя
+        in: query
+        name: telegram_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.UserCheckResponse'
+        "400":
+          description: invalid telegram_id
+          schema:
+            $ref: '#/definitions/models.CommonErrorResponse'
+        "404":
+          description: user not found
+          schema:
+            $ref: '#/definitions/models.CommonErrorResponse'
+      summary: Проверить пользователя
+      tags:
+      - user
+swagger: "2.0"

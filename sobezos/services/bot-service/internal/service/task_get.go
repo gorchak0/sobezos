@@ -2,73 +2,32 @@ package service
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
-	"strconv"
-	"strings"
-
-	"sobezos/services/bot-service/internal/models"
 
 	"go.uber.org/zap"
 )
 
 func (s *Service) TaskGet(telegramID int) (string, error) {
-	// Получаем тэги пользователя из user-service
-	state, err := s.UserStateGet(telegramID)
-	var tags []string
-	if err == nil && state != nil {
-		tags = state.TheoryTags
-	}
-
-	// Формируем query-параметр
-	tagsParam := ""
-	if len(tags) > 0 {
-		tagsParam = "?tags=" + strings.Join(tags, ",")
-	}
-	url := "http://theory-service:8081/taskget" + tagsParam
-
+	s.Logger.Info("TaskGet called", zap.Int("telegram_id", telegramID))
+	url := fmt.Sprintf("%s/taskget?telegram_id=%d", s.CoreServiceUrl, telegramID)
 	resp, err := http.Get(url)
 	if err != nil {
-		s.logger.Error("Не удалось выполнить GET-запрос к theory-service", zap.Error(err))
-		return "⚠️ Сервис временно недоступен", err
+		s.Logger.Error("TaskGet: http.Get error", zap.Error(err))
+		return "", err
 	}
 	defer resp.Body.Close()
-
-	//обработка ошибок
-	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		s.logger.Error("theory-service вернул ошибочный статус", zap.Int("status", resp.StatusCode), zap.String("body", string(body)))
-		return "⚠️ Сервис временно недоступен", ErrServiceUnavailable
+	body, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode != 200 {
+		s.Logger.Error("TaskGet: non-200 response", zap.Int("status", resp.StatusCode), zap.ByteString("body", body))
+		return "", fmt.Errorf("core-service error: %s", string(body))
 	}
-
-	//чтение тела
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		s.logger.Error("Не удалось прочитать тело ответа от theory-service", zap.Error(err))
-		return "⚠️ Сервис временно недоступен", ErrServiceUnavailable
+	var res commonSuccessResponse
+	if err := json.Unmarshal(body, &res); err != nil {
+		s.Logger.Error("TaskGet: json.Unmarshal error", zap.Error(err))
+		return "", err
 	}
-
-	//получаем содержимое
-	var task TaskResponse
-	if err := json.Unmarshal(body, &task); err != nil {
-		s.logger.Error("Не удалось распарсить JSON от theory-service", zap.Error(err), zap.String("raw_body", string(body)))
-		return "⚠️ Сервис временно недоступен", ErrServiceUnavailable
-	}
-
-	// Сохраняем состояние пользователя
-
-	//fmt.Printf("\n\n\n!!!Сохраняем состояние пользователя: %d, %d\n\n\n\n", state.UserID, telegramID)
-
-	s.UserStateEdit(telegramID, models.UserState{
-		UserID:           int64(telegramID),
-		LastTheoryTaskID: task.ID,
-		LastAction:       "get_task",
-		LastTheoryAnswer: "", //
-	})
-
-	tagsText := ""
-	if len(task.Tags) > 0 {
-		tagsText = "Теги: " + strings.Join(task.Tags, ", ") + "\n"
-	}
-	return "Задача №" + strconv.Itoa(task.ID) + ":\n" + task.Question + "\n" + tagsText, nil
+	s.Logger.Info("TaskGet: success", zap.String("result", res.Result))
+	return res.Result, nil
 }

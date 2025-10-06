@@ -3,7 +3,7 @@ package service
 import (
 	"encoding/json"
 	"net/http"
-	"sobezos/services/bot-service/internal/models"
+	"sobezos/services/core-service/internal/models"
 	"strconv"
 )
 

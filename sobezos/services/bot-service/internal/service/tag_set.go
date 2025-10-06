@@ -1,55 +1,39 @@
 package service
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
-	"sobezos/services/bot-service/internal/models"
-	"strings"
+	"io"
+	"net/http"
+
+	"go.uber.org/zap"
 )
 
 func (s *Service) TagSet(telegramID int, args string) (string, error) {
-	// Получаем текущие тэги пользователя
-	state, err := s.UserStateGet(telegramID)
-	var currentTags []string
-	if err == nil && state != nil {
-		currentTags = state.TheoryTags
-	}
+	s.Logger.Info("TagSet called", zap.Int("telegram_id", telegramID), zap.String("args", args))
 
-	// Парсим новые тэги
-	newTags := strings.Split(args, ",")
-	for i := range newTags {
-		newTags[i] = strings.TrimSpace(newTags[i])
-	}
+	url := fmt.Sprintf("%s/tagset?telegram_id=%d", s.CoreServiceUrl, telegramID)
 
-	// Добавляем только уникальные новые тэги
-	tagSet := make(map[string]struct{})
-	for _, t := range currentTags {
-		tagSet[t] = struct{}{}
+	reqBody, _ := json.Marshal(map[string]string{"args": args})
+	req, _ := http.NewRequest("POST", url, bytes.NewBuffer(reqBody))
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		s.Logger.Error("TagSet: http.Do error", zap.Error(err))
+		return "", err
 	}
-	for _, t := range newTags {
-		if t != "" {
-			tagSet[t] = struct{}{}
-		}
+	defer resp.Body.Close()
+	body, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode != 200 {
+		s.Logger.Error("TagSet: non-200 response", zap.Int("status", resp.StatusCode), zap.ByteString("body", body))
+		return "", fmt.Errorf("core-service error: %s", string(body))
 	}
-	mergedTags := make([]string, 0, len(tagSet))
-	for t := range tagSet {
-		mergedTags = append(mergedTags, t)
+	var res commonSuccessResponse
+	if err := json.Unmarshal(body, &res); err != nil {
+		s.Logger.Error("TagSet: json.Unmarshal error", zap.Error(err))
+		return "", err
 	}
-
-	// Сохраняем состояние пользователя
-	s.UserStateEdit(telegramID, models.UserState{
-		TheoryTags: mergedTags,
-	})
-
-	// Повторно читаем состояние пользователя
-	updatedState, err := s.UserStateGet(telegramID)
-	var allTags []string
-	if err == nil && updatedState != nil {
-		allTags = updatedState.TheoryTags
-	}
-
-	return fmt.Sprintf(
-		"Тэги успешно добавлены: %s\nВсе ваши тэги: %s",
-		strings.Join(newTags, ", "),
-		strings.Join(allTags, ", "),
-	), nil
+	s.Logger.Info("TagSet: success", zap.String("result", res.Result))
+	return res.Result, nil
 }

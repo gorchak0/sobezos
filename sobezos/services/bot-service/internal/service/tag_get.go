@@ -2,39 +2,32 @@ package service
 
 import (
 	"encoding/json"
+	"fmt"
+	"io"
 	"net/http"
-	"strings"
+
+	"go.uber.org/zap"
 )
 
-// TagGet получает список всех доступных тегов с описаниями из theory-service
 func (s *Service) TagGet() (string, error) {
-	url := "http://theory-service:8081/tagget"
+	s.Logger.Info("TagGet called")
+	url := fmt.Sprintf("%s/tagget", s.CoreServiceUrl)
 	resp, err := http.Get(url)
 	if err != nil {
-		return "Ошибка запроса к theory-service", err
+		s.Logger.Error("TagGet: http.Get error", zap.Error(err))
+		return "", err
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return "Ошибка theory-service", nil
+	body, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode != 200 {
+		s.Logger.Error("TagGet: non-200 response", zap.Int("status", resp.StatusCode), zap.ByteString("body", body))
+		return "", fmt.Errorf("core-service error: %s", string(body))
 	}
-	var tags []struct {
-		Name        string `json:"name"`
-		Description string `json:"description"`
+	var res commonSuccessResponse
+	if err := json.Unmarshal(body, &res); err != nil {
+		s.Logger.Error("TagGet: json.Unmarshal error", zap.Error(err))
+		return "", err
 	}
-	if err := json.NewDecoder(resp.Body).Decode(&tags); err != nil {
-		return "Ошибка разбора ответа от theory-service", err
-	}
-	if len(tags) == 0 {
-		return "Нет доступных тегов", nil
-	}
-	var sb strings.Builder
-	sb.WriteString("Доступные теги:\n")
-	for _, t := range tags {
-		sb.WriteString("- " + t.Name)
-		if t.Description != "" {
-			sb.WriteString(": " + t.Description)
-		}
-		sb.WriteString("\n")
-	}
-	return sb.String(), nil
+	s.Logger.Info("TagGet: success", zap.String("result", res.Result))
+	return res.Result, nil
 }

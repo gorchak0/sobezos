@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"strconv"
 
-	"sobezos/services/bot-service/internal/models"
+	"sobezos/services/core-service/internal/models"
 )
 
 func (s *Service) UserStateEdit(userID int, patch models.UserState) error {

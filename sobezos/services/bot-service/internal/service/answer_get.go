@@ -3,59 +3,31 @@ package service
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
-	"sobezos/services/bot-service/internal/models"
 
 	"go.uber.org/zap"
 )
 
 func (s *Service) AnswerGet(telegramID int) (string, error) {
-
-	// Получить id последнего теоретического вопроса
-	state, err := s.UserStateGet(telegramID)
-	if err != nil || state == nil {
-		s.logger.Error("Не удалось получить состояние пользователя", zap.Int("telegramID", telegramID), zap.Error(err))
-		return "Нет информации о последней задаче", ErrServiceUnavailable
-	}
-	taskID := state.LastTheoryTaskID
-	if taskID == 0 {
-		s.logger.Warn("Нет информации о последней задаче", zap.Int("telegramID", telegramID))
-		return "Нет информации о последней задаче", ErrServiceUnavailable
-	}
-
-	// получение текста вопроса
-	url := fmt.Sprintf("http://theory-service:8081/answerget?task_id=%d", taskID)
+	s.Logger.Info("AnswerGet called", zap.Int("telegram_id", telegramID))
+	url := fmt.Sprintf("%s/answerget?telegram_id=%d", s.CoreServiceUrl, telegramID)
 	resp, err := http.Get(url)
 	if err != nil {
-		s.logger.Error("Ошибка при запросе к theory-service", zap.String("url", url), zap.Error(err))
+		s.Logger.Error("AnswerGet: http.Get error", zap.Error(err))
 		return "", err
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		s.logger.Error("theory-service вернул ошибочный статус", zap.Int("status", resp.StatusCode), zap.String("url", url))
-		return "", nil
+	body, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode != 200 {
+		s.Logger.Error("AnswerGet: non-200 response", zap.Int("status", resp.StatusCode), zap.ByteString("body", body))
+		return "", fmt.Errorf("core-service error: %s", string(body))
 	}
-	var res struct {
-		Answer string `json:"answer"`
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&res); err != nil {
-		s.logger.Error("Ошибка декодирования ответа от theory-service", zap.Error(err))
+	var res commonSuccessResponse
+	if err := json.Unmarshal(body, &res); err != nil {
+		s.Logger.Error("AnswerGet: json.Unmarshal error", zap.Error(err))
 		return "", err
 	}
-
-	// фиксируем
-	err = s.UserStateEdit(telegramID, models.UserState{
-		LastAction:       "get_answer",
-		LastTheoryTaskID: taskID,
-		LastTheoryAnswer: "", //
-	})
-	if err != nil {
-		s.logger.Error("Ошибка при обновлении состояния пользователя", zap.Int("telegramID", telegramID), zap.Error(err))
-		return "", err
-	}
-
-	result := fmt.Sprintf("Ответ на вопрос №%d: %s", taskID, res.Answer)
-	s.logger.Info("Ответ успешно получен", zap.Int("telegramID", telegramID), zap.Int("taskID", taskID))
-
-	return result, nil
+	s.Logger.Info("AnswerGet: success", zap.String("result", res.Result))
+	return res.Result, nil
 }

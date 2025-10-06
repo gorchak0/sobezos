@@ -1,32 +1,37 @@
 package service
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
-	"sobezos/services/bot-service/internal/models"
-	"strings"
+	"io"
+	"net/http"
+
+	"go.uber.org/zap"
 )
 
-// TagClear удаляет все теги из состояния пользователя
 func (s *Service) TagClear(telegramID int) (string, error) {
-	patch := models.UserState{
-		TheoryTags: []string{},
-	}
-
-	fmt.Printf("\n\n\n - bot-service - TagClear patch: %+v\n\n\n", patch)
-	err := s.UserStateEdit(telegramID, patch)
+	s.Logger.Info("TagClear called", zap.Int("telegram_id", telegramID))
+	url := fmt.Sprintf("%s/tagclear", s.CoreServiceUrl)
+	reqBody, _ := json.Marshal(map[string]int{"telegram_id": telegramID})
+	req, _ := http.NewRequest("POST", url, bytes.NewBuffer(reqBody))
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return "Ошибка очистки тегов", err
+		s.Logger.Error("TagClear: http.Do error", zap.Error(err))
+		return "", err
 	}
-
-	// Повторно читаем состояние пользователя
-	updatedState, err := s.UserStateGet(telegramID)
-	var allTags []string
-	if err == nil && updatedState != nil {
-		allTags = updatedState.TheoryTags
+	defer resp.Body.Close()
+	body, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode != 200 {
+		s.Logger.Error("TagClear: non-200 response", zap.Int("status", resp.StatusCode), zap.ByteString("body", body))
+		return "", fmt.Errorf("core-service error: %s", string(body))
 	}
-
-	return fmt.Sprintf(
-		"Тэги успешно очищены\nВсе ваши тэги: %s",
-		strings.Join(allTags, ", "),
-	), nil
+	var res commonSuccessResponse
+	if err := json.Unmarshal(body, &res); err != nil {
+		s.Logger.Error("TagClear: json.Unmarshal error", zap.Error(err))
+		return "", err
+	}
+	s.Logger.Info("TagClear: success", zap.String("result", res.Result))
+	return res.Result, nil
 }

@@ -17,6 +17,11 @@ type UserStateRepository struct {
 	DB *sql.DB
 }
 
+// NewUserStateRepository создаёт новый репозиторий для работы с user_states.
+func NewUserStateRepository(db *sql.DB) *UserStateRepository {
+	return &UserStateRepository{DB: db}
+}
+
 // Patch обновляет указанные поля user_state для пользователя по userID.
 func (r *UserStateRepository) Patch(userID int64, patch models.UserState) error {
 	setParts := []string{}
@@ -28,29 +33,14 @@ func (r *UserStateRepository) Patch(userID int64, patch models.UserState) error 
 		args = append(args, patch.LastTheoryTaskID)
 		idx++
 	}
-	if patch.LastCodeTaskID != nil {
-		setParts = append(setParts, "last_code_task_id=$"+strconv.Itoa(idx))
-		args = append(args, patch.LastCodeTaskID)
-		idx++
-	}
-	if patch.LastTheoryAnswer != nil {
-		setParts = append(setParts, "last_theory_answer=$"+strconv.Itoa(idx))
-		args = append(args, patch.LastTheoryAnswer)
-		idx++
-	}
-	if patch.LastCodeAnswer != nil {
-		setParts = append(setParts, "last_code_answer=$"+strconv.Itoa(idx))
-		args = append(args, patch.LastCodeAnswer)
-		idx++
-	}
 	if patch.TheoryTags != nil {
 		setParts = append(setParts, "theory_tags=$"+strconv.Itoa(idx))
 		args = append(args, pq.Array(patch.TheoryTags))
 		idx++
 	}
-	if patch.CodeTags != nil {
-		setParts = append(setParts, "code_tags=$"+strconv.Itoa(idx))
-		args = append(args, pq.Array(patch.CodeTags))
+	if patch.CompletedTheoryTasks != nil {
+		setParts = append(setParts, "completed_theory_tasks=$"+strconv.Itoa(idx))
+		args = append(args, pq.Array(patch.CompletedTheoryTasks))
 		idx++
 	}
 	if patch.LastAction != nil {
@@ -67,7 +57,6 @@ func (r *UserStateRepository) Patch(userID int64, patch models.UserState) error 
 	args = append(args, userID)
 	query := `UPDATE user_states SET ` + setClause + ` WHERE user_id=$` + strconv.Itoa(idx)
 
-	//fmt.Printf("\n\nquery=%s, args=%v\n\n\n", query, args)
 	_, err := r.DB.Exec(query, args...)
 	if err != nil {
 		log.Printf("[Patch] Error updating user_state for user_id=%d: %v, query=%s, args=%v", userID, err, query, args)
@@ -77,19 +66,13 @@ func (r *UserStateRepository) Patch(userID int64, patch models.UserState) error 
 	return nil
 }
 
-// NewUserStateRepository создаёт новый репозиторий для работы с user_states.
-func NewUserStateRepository(db *sql.DB) *UserStateRepository {
-	return &UserStateRepository{DB: db}
-}
-
-// Get возвращает состояние пользователя по userID.
-// Возвращает структуру UserState или ошибку, если запись не найдена или возникла ошибка.
+// Get возвращает структуру UserState или ошибку, если запись не найдена или возникла ошибка.
+// Get возвращает структуру UserState или ошибку, если запись не найдена или возникла ошибка.
 func (r *UserStateRepository) Get(userID int64) (*models.UserState, error) {
 
 	row := r.DB.QueryRow(`
-    SELECT user_id, last_theory_task_id, last_code_task_id,
-           last_theory_answer, last_code_answer,
-           theory_tags, code_tags, last_action, updated_at
+    SELECT user_id, last_theory_task_id, theory_tags, 
+           completed_theory_tasks, last_action, updated_at
     FROM user_states
     WHERE user_id=$1
 `, userID)
@@ -98,11 +81,8 @@ func (r *UserStateRepository) Get(userID int64) (*models.UserState, error) {
 	err := row.Scan(
 		&state.UserID,
 		&state.LastTheoryTaskID,
-		&state.LastCodeTaskID,
-		&state.LastTheoryAnswer,
-		&state.LastCodeAnswer,
 		pq.Array(&state.TheoryTags),
-		pq.Array(&state.CodeTags),
+		pq.Array(&state.CompletedTheoryTasks),
 		&state.LastAction,
 		&state.UpdatedAt,
 	)
@@ -118,16 +98,13 @@ func (r *UserStateRepository) Get(userID int64) (*models.UserState, error) {
 // AddState создает новую запись user_state для пользователя
 func (r *UserStateRepository) AddState(state models.UserState) error {
 	query := `INSERT INTO user_states (
-		user_id, last_theory_task_id, last_code_task_id, last_theory_answer, last_code_answer, theory_tags, code_tags, last_action, updated_at
-	) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`
+		user_id, last_theory_task_id, theory_tags, completed_theory_tasks, last_action, updated_at
+	) VALUES ($1, $2, $3, $4, $5, $6)`
 	_, err := r.DB.Exec(query,
 		state.UserID,
 		state.LastTheoryTaskID,
-		state.LastCodeTaskID,
-		state.LastTheoryAnswer,
-		state.LastCodeAnswer,
 		pq.Array(state.TheoryTags),
-		pq.Array(state.CodeTags),
+		pq.Array(state.CompletedTheoryTasks),
 		state.LastAction,
 		state.UpdatedAt,
 	)

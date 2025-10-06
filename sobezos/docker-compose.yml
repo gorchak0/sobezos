@@ -40,6 +40,13 @@ services:
       - DB_PASSWORD=user_pass
       - DB_NAME=user_db
 
+  core-service:
+    build: ./services/core-service
+    ports:
+      - '8083:8083'
+    networks:
+      - app_network
+
   theory-db:
     image: postgres:15
     restart: always
