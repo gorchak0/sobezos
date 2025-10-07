@@ -18,7 +18,7 @@ func (s *Service) TaskEdit(telegramID int, id string, question string, answer st
 	// Проверяем обязательное поле id
 	if id == "" {
 		s.logger.Error("Не указан id задачи для редактирования")
-		return "Для редактирования задачи необходимо указать id", nil
+		return "📝Для редактирования задачи необходимо указать id", nil
 	}
 
 	// Преобразовать строку в число
@@ -46,27 +46,27 @@ func (s *Service) TaskEdit(telegramID int, id string, question string, answer st
 	newJson, err := json.Marshal(requestData)
 	if err != nil {
 		s.logger.Error("Ошибка формирования задачи", zap.Error(err))
-		return "Ошибка формирования задачи", err
+		return "⚠️Ошибка формирования задачи", err
 	}
 
 	req, err := http.NewRequest("PUT", url, bytes.NewBuffer(newJson))
 	if err != nil {
 		s.logger.Error("Ошибка формирования запроса к theory-service", zap.Error(err))
-		return "Ошибка формирования запроса к theory-service", err
+		return "⚠️Ошибка формирования запроса к theory\\-service", err
 	}
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		s.logger.Error("Ошибка запроса к theory-service", zap.Error(err))
-		return "Ошибка запроса к theory-service", err
+		return "⚠️Ошибка запроса к theory\\-service", err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusOK {
-		return "Задача успешно обновлена", nil
+		return "✅Задача успешно обновлена", nil
 	}
 
 	respMsg, _ := io.ReadAll(resp.Body)
 	s.logger.Error("theory-service вернул ошибку при редактировании задачи", zap.Int("status", resp.StatusCode), zap.String("body", string(respMsg)))
-	return "Ошибка: " + string(respMsg), nil
+	return "⚠️Ошибка: " + string(respMsg), nil
 }

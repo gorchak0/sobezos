@@ -17,6 +17,52 @@ func NewTaskRepository(db *sql.DB) *TaskRepository {
 	return &TaskRepository{DB: db}
 }
 
+// GetTaskCount возвращает общее количество задач в таблице tasks
+func (r *TaskRepository) GetTaskCount() (int, error) {
+	var count int
+	err := r.DB.QueryRow(`SELECT COUNT(*) FROM tasks`).Scan(&count)
+	if err != nil {
+		return 0, err
+	}
+	return count, nil
+}
+
+// GetTaskIDsByTags возвращает id всех задач, у которых есть все указанные теги
+func (r *TaskRepository) GetTaskIDsByTags(tags []string) ([]int, error) {
+	if len(tags) == 0 {
+		// Если теги не указаны, возвращаем все id задач
+		rows, err := r.DB.Query(`SELECT id FROM tasks`)
+		if err != nil {
+			return nil, err
+		}
+		defer rows.Close()
+		var ids []int
+		for rows.Next() {
+			var id int
+			if err := rows.Scan(&id); err != nil {
+				return nil, err
+			}
+			ids = append(ids, id)
+		}
+		return ids, nil
+	}
+	query := `SELECT t.id FROM tasks t JOIN task_tags tt ON t.id = tt.task_id JOIN tags tg ON tt.tag_id = tg.id WHERE tg.name = ANY($1) GROUP BY t.id HAVING COUNT(DISTINCT tg.name) = $2 ORDER BY t.id;`
+	rows, err := r.DB.Query(query, pq.Array(tags), len(tags))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var ids []int
+	for rows.Next() {
+		var id int
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		ids = append(ids, id)
+	}
+	return ids, nil
+}
+
 // GetRandomTaskRow возвращает случайную задачу (без тегов)
 func (r *TaskRepository) GetRandomTaskRow(tags []string) (*models.Task, error) {
 	task := &models.Task{}

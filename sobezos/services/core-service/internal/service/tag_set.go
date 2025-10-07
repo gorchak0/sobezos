@@ -34,7 +34,7 @@ func (s *Service) TagSet(telegramID int, args string) (string, error) {
 	// Если пользователь не передал новые теги
 	if len(newTags) == 0 {
 		return fmt.Sprintf(
-			"Новые тэги\\: отсутствуют\nВсе ваши тэги\\: %s\nПройденные задачи\\: %v шт\\.",
+			"✨Новые тэги\\: отсутствуют\nВсе ваши тэги\\: %s\nПройденные задачи\\: %v шт\\.",
 			strings.Join(currentTags, ", "),
 			len(completedTasks),
 		), nil
@@ -57,7 +57,7 @@ func (s *Service) TagSet(telegramID int, args string) (string, error) {
 	// Если ничего нового нет, просто возвращаем текущее состояние
 	if !hasNewTags {
 		return fmt.Sprintf(
-			"Новые тэги\\: нет новых\nВсе ваши тэги\\: %s\nПройденные задачи\\: %v шт\\.",
+			"✨Новые тэги\\: нет новых\nВсе ваши тэги\\: %s\nПройденные задачи\\: %v шт\\.",
 			strings.Join(currentTags, ", "),
 			len(completedTasks),
 		), nil
@@ -79,7 +79,7 @@ func (s *Service) TagSet(telegramID int, args string) (string, error) {
 	}
 
 	if err := s.UserStateEdit(telegramID, updateData); err != nil {
-		s.logger.Error("Ошибка при обновлении состояния пользователя", zap.Int("telegramID", telegramID), zap.Error(err))
+		s.logger.Error("⚠️Ошибка при обновлении состояния пользователя", zap.Int("telegramID", telegramID), zap.Error(err))
 		return "", err
 	}
 
@@ -90,7 +90,7 @@ func (s *Service) TagSet(telegramID int, args string) (string, error) {
 	}
 
 	return fmt.Sprintf(
-		"Новые тэги: %s\nВсе ваши тэги\\: %s\nПройденные задачи\\: %s",
+		"✨Новые тэги\\: %s\nВсе ваши тэги\\: %s\nПройденные задачи\\: %s",
 		strings.Join(newTags, ", "),
 		strings.Join(mergedTags, ", "),
 		completedMsg,

@@ -24,6 +24,9 @@ func (s *Service) StatsGet(telegramID int) (string, error) {
 		return "", fmt.Errorf("core-service error: %s", string(body))
 	}
 	var res commonSuccessResponse
+
+	s.Logger.Info("AnswerGet: raw body", zap.ByteString("body", body))
+
 	if err := json.Unmarshal(body, &res); err != nil {
 		s.Logger.Error("AnswerGet: json.Unmarshal error", zap.Error(err))
 		return "", err

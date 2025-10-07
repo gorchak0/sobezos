@@ -18,7 +18,7 @@ func (s *Service) TaskGetID(telegramID int, args string) (string, error) {
 	taskID, err := strconv.Atoi(args)
 	if err != nil {
 		s.logger.Error("Некорректный id задачи", zap.Error(err))
-		return "Некорректный id задачи\\. Используйте /taskgetid <id\\_задачи>", nil
+		return "❌Некорректный id задачи\\. Используйте /taskgetid <id\\_задачи>", nil
 	}
 
 	// Сначала получаем текущее состояние пользователя
@@ -56,7 +56,7 @@ func (s *Service) TaskGetID(telegramID int, args string) (string, error) {
 	}
 
 	if task.Exist == 0 {
-		return "Задача с таким id не найдена", nil
+		return "❌Задача с таким id не найдена", nil
 	}
 
 	// Добавляем задачу в completed_theory_tasks, если её там еще нет
@@ -91,5 +91,5 @@ func (s *Service) TaskGetID(telegramID int, args string) (string, error) {
 		tagsText = "Теги:\n \\- " + strings.Join(task.Tags, ", ") + "\n"
 	}
 
-	return fmt.Sprintf("Задача №%d %s \n%s", task.ID, task.Question, tagsText), nil
+	return fmt.Sprintf("📌Задача №%d \n%s \n%s", task.ID, task.Question, tagsText), nil
 }

@@ -41,15 +41,14 @@ func main() {
 	service := service.NewTaskService(repo)
 	handler := handler.NewTaskHandler(service, logger)
 
-	//для всех пользователей
 	http.HandleFunc("/taskget", handler.TaskGet)
 	http.HandleFunc("/taskgetid", handler.TaskGetID)
 	http.HandleFunc("/answerget", handler.AnswerGet)
 	http.HandleFunc("/tagget", handler.TagGet)
-
-	//для админов
 	http.HandleFunc("/taskadd", handler.TaskAdd)
 	http.HandleFunc("/taskedit", handler.TaskEdit)
+	http.HandleFunc("/taskgetall", handler.TaskGetAll)
+	http.HandleFunc("/taskgettags", handler.TaskGetTags)
 
 	logger.Info("theory-service listening on :8081")
 	log.Fatal(http.ListenAndServe(":8081", nil))

@@ -22,7 +22,7 @@ func (s *Service) TaskAdd(telegramID int, question string, answer string, tags [
 	newJson, err := json.Marshal(reqBody)
 	if err != nil {
 		s.logger.Error("Ошибка формирования задачи", zap.Error(err))
-		return "Ошибка формирования задачи", err
+		return "⚠️Ошибка формирования задачи", err
 	}
 
 	// --- Логируем JSON перед отправкой ---
@@ -34,13 +34,13 @@ func (s *Service) TaskAdd(telegramID int, question string, answer string, tags [
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(newJson))
 	if err != nil {
 		s.logger.Error("Ошибка формирования запроса к theory-service", zap.Error(err))
-		return "Ошибка формирования запроса к theory-service", err
+		return "⚠️Ошибка формирования запроса к theory-service", err
 	}
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		s.logger.Error("Ошибка запроса к theory-service", zap.Error(err))
-		return "Ошибка запроса к theory-service", err
+		return "⚠️Ошибка запроса к theory-service", err
 	}
 	defer resp.Body.Close()
 
@@ -51,11 +51,11 @@ func (s *Service) TaskAdd(telegramID int, question string, answer string, tags [
 		}
 		if err := json.NewDecoder(resp.Body).Decode(&respData); err != nil {
 			s.logger.Error("Ошибка декодирования ответа theory-service", zap.Error(err))
-			return "Задача добавлена, но не удалось получить id", nil
+			return "⚠️Задача добавлена, но не удалось получить id", nil
 		}
-		return "Задача успешно добавлена\\. Номер задачи: " + strconv.Itoa(respData.ID), nil
+		return "✅Задача успешно добавлена\\. Номер задачи: " + strconv.Itoa(respData.ID), nil
 	}
 	respMsg, _ := io.ReadAll(resp.Body)
 	s.logger.Error("theory-service вернул ошибку при добавлении задачи", zap.Int("status", resp.StatusCode), zap.String("body", string(respMsg)))
-	return "Ошибка при добавлении задачи", ErrServiceUnavailable
+	return "⚠️Ошибка при добавлении задачи", ErrServiceUnavailable
 }

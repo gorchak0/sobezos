@@ -2,9 +2,10 @@ package handler
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
+	"time"
 
 	"go.uber.org/zap"
 )
@@ -28,15 +29,65 @@ func (h *TaskHandler) TaskGet(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	fmt.Printf("\n\ntheory-service  TaskGet %s \n", tags)
-	//
-	// Получаем задачу с учётом тегов
-	task, err := h.service.GetRandomTask(tags)
-	if err != nil || task == nil {
-		h.logger.Error("Ошибка получения задачи из сервиса", zap.Error(err))
+	if len(tags) == 0 {
+		// Нет задач по выбранным тегам вообще
+		msg := map[string]string{"message": "❌Доступных задач нет, так как тэги не выбраны\\. Используйте \\/tagset"}
+		h.logger.Info("Нет задач по выбранным тегам", zap.Strings("tags", tags))
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(msg)
+		return
+	}
+
+	// Получаем exclude из query (?exclude=...)
+	excludeParam := r.URL.Query().Get("exclude")
+	excludeSet := make(map[int]struct{})
+	if excludeParam != "" {
+		excludeStrs := splitAndTrim(excludeParam, ",")
+		for _, s := range excludeStrs {
+			if s == "" {
+				continue
+			}
+			if id, err := strconv.Atoi(s); err == nil {
+				excludeSet[id] = struct{}{}
+			}
+		}
+	}
+
+	// Получаем id задач по тегам (или все задачи, если теги не заданы)
+	ids, err := h.service.GetTaskIDsByTags(tags)
+	if err != nil {
+		h.logger.Error("Ошибка получения id задач по тегам", zap.Error(err))
 		http.Error(w, "Failed to get task", http.StatusInternalServerError)
 		return
 	}
+
+	// Фильтруем задачи, исключая прорешённые
+	var availableIDs []int
+	for _, id := range ids {
+		if _, found := excludeSet[id]; !found {
+			availableIDs = append(availableIDs, id)
+		}
+	}
+
+	if len(availableIDs) == 0 {
+		// Все задачи по тегам прорешаны
+		msg := map[string]string{"message": "Поздравляем, вы прорешали все задачи по доступным тэгам"}
+		h.logger.Info("Все задачи по тегам прорешаны", zap.Strings("tags", tags), zap.Any("exclude", excludeSet))
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(msg)
+		return
+	}
+
+	// Выбираем случайную задачу из доступных
+	randIdx := time.Now().UnixNano() % int64(len(availableIDs))
+	taskID := availableIDs[randIdx]
+	task, err := h.service.GetTaskByID(taskID)
+	if err != nil || task == nil {
+		h.logger.Error("Ошибка получения задачи по id", zap.Error(err), zap.Int("id", taskID))
+		http.Error(w, "Failed to get task", http.StatusInternalServerError)
+		return
+	}
+
 	response := struct {
 		ID       int      `json:"id"`
 		Tags     []string `json:"tags"`

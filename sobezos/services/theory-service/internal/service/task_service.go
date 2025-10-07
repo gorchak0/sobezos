@@ -30,6 +30,16 @@ func (s *TaskService) GetRandomTask(tags []string) (*models.Task, error) {
 	return task, nil
 }
 
+// GetTaskCount возвращает общее количество задач (бизнес-логика)
+func (s *TaskService) GetTaskCount() (int, error) {
+	return s.repo.GetTaskCount()
+}
+
+// GetTaskIDsByTags возвращает id задач по тегам (бизнес-логика)
+func (s *TaskService) GetTaskIDsByTags(tags []string) ([]int, error) {
+	return s.repo.GetTaskIDsByTags(tags)
+}
+
 // CreateTask creates a new task (бизнес-логика)
 func (s *TaskService) CreateTask(tags []string, question, answer string) (int, error) {
 	task := &models.Task{

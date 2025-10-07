@@ -62,3 +62,5 @@ type UserCheckResponse struct {
 	Role     string `json:"role"`
 	Username string `json:"username"`
 }
+
+//

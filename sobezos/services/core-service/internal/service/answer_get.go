@@ -15,13 +15,13 @@ func (s *Service) AnswerGet(telegramID int) (string, error) {
 	state, err := s.UserStateGet(telegramID)
 	if err != nil || state == nil {
 		s.logger.Error("Не удалось получить состояние пользователя", zap.Int("telegramID", telegramID), zap.Error(err))
-		return "Нет информации о последней задаче", ErrServiceUnavailable
+		return "❌Нет информации о последней задаче", ErrServiceUnavailable
 	}
 
 	taskID := state.LastTheoryTaskID
 	if taskID == nil || *taskID == 0 {
 		s.logger.Warn("Нет информации о последней задаче", zap.Int("telegramID", telegramID))
-		return "Нет информации о последней задаче", ErrServiceUnavailable
+		return "❌Нет информации о последней задаче", ErrServiceUnavailable
 	}
 
 	// Получение текста ответа
@@ -79,7 +79,7 @@ func (s *Service) AnswerGet(telegramID int) (string, error) {
 		return "", err
 	}
 
-	result := fmt.Sprintf("Ответ на вопрос №%d: %s", *taskID, res.Answer)
+	result := fmt.Sprintf("💡Ответ на вопрос №%d: \n%s", *taskID, res.Answer)
 	s.logger.Info("Ответ успешно получен",
 		zap.Int("telegramID", telegramID),
 		zap.Int("taskID", *taskID),

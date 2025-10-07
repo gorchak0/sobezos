@@ -2,6 +2,7 @@ package service
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -58,7 +59,16 @@ func (s *Service) TaskGet(telegramID int) (string, error) {
 		return "⚠️ Сервис временно недоступен", ErrServiceUnavailable
 	}
 
-	// Получаем содержимое
+	// Проверяем, не пришло ли сообщение об отсутствии задач
+	type msgResponse struct {
+		Message string `json:"message"`
+	}
+	var msg msgResponse
+	if err := json.Unmarshal(body, &msg); err == nil && msg.Message != "" {
+		return msg.Message, nil
+	}
+
+	// Получаем содержимое задачи
 	var task TaskResponse
 	if err := json.Unmarshal(body, &task); err != nil {
 		s.logger.Error("Не удалось распарсить JSON от theory-service", zap.Error(err), zap.String("raw_body", string(body)))
@@ -102,5 +112,9 @@ func (s *Service) TaskGet(telegramID int) (string, error) {
 	if len(task.Tags) > 0 {
 		tagsText = "Теги: " + strings.Join(task.Tags, ", ") + "\n"
 	}
-	return "Задача №" + strconv.Itoa(task.ID) + ":\n" + task.Question + "\n" + tagsText, nil
+
+	return fmt.Sprintf("📌Задача №%d:\n%s\n%s", task.ID, task.Question, tagsText), nil
+
 }
+
+//
