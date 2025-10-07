@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"sort"
 	"strings"
 )
 
@@ -85,19 +86,42 @@ func (s *Service) StatsGet(userID int) (string, error) {
 		percentByTags = completedByTag * 100 / tagTasksCount
 	}
 
-	// Оставшиеся задачи по тегам
+	// Оставшиеся задачи по тегам (отсортированные, строка через запятую)
 	left := make([]int, 0, tagTasksCount)
 	for _, id := range tagTaskIDs {
 		if _, ok := completedTasks[fmt.Sprint(id)]; !ok {
 			left = append(left, id)
 		}
 	}
+	leftStr := ""
+	if len(left) > 0 {
+		sort.Ints(left)
+		leftStrs := make([]string, 0, len(left))
+		for _, id := range left {
+			leftStrs = append(leftStrs, fmt.Sprint(id))
+		}
+		leftStr = strings.Join(leftStrs, ",")
+	}
+
+	// Формируем строку с номерами просмотренных задач через запятую
+	completedIDs := make([]int, 0, len(completedSet))
+	for id := range completedSet {
+		completedIDs = append(completedIDs, id)
+	}
+	// Сортируем для стабильного вывода
+	if len(completedIDs) > 0 {
+		sort.Ints(completedIDs)
+	}
+	completedIDsStrs := make([]string, 0, len(completedIDs))
+	for _, id := range completedIDs {
+		completedIDsStrs = append(completedIDsStrs, fmt.Sprint(id))
+	}
 
 	// Формируем ответ
 	stat := fmt.Sprintf(
-		"📊 Ваша статистика\\:\n\nВсего просмотрено %d%% задач \\(%d из %d\\)\nПо тэгам \\[%s \\] %d%% \\(%d из %d\\)\nНомера оставшихся\\: \\[%v \\]",
+		"📊 Ваша статистика\\:\n\nВсего просмотрено %d%% задач \\(%d из %d\\)\nПо тэгам \\[%s \\] %d%% \\(%d из %d\\)\nНомера просмотренных\\: \\[%s \\]\nНомера оставшихся\\: \\[%s \\]",
 		percentTotal, completedTotal, totalTasks,
-		strings.Join(userTags, ","), percentByTags, completedByTag, tagTasksCount, left,
+		strings.Join(userTags, ","), percentByTags, completedByTag, tagTasksCount, strings.Join(completedIDsStrs, ","), leftStr,
 	)
 	return stat, nil
 }

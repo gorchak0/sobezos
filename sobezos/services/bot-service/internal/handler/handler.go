@@ -12,7 +12,7 @@ import (
 type Handler struct {
 	logger  *zap.Logger
 	service service.ServiceInterface
-	mdUtil  mdutils.MarkdownProcessor
+	mdUtil  *mdutils.MarkdownV2Processor
 }
 
 func NewHandler(logger *zap.Logger, svc service.ServiceInterface) *Handler {
@@ -27,19 +27,15 @@ func (h *Handler) HandleUpdate(update tgbotapi.Update, bot *tgbotapi.BotAPI) {
 		fmt.Println("Received non-message update")
 		return
 	}
-	fmt.Println("Received message update")
 
 	telegramID := int(update.Message.From.ID)
-	fmt.Println("Get Telegram ID:", telegramID)
 	chatID := update.Message.Chat.ID
-	fmt.Println("Get Chat ID:", chatID)
 	cmd := update.Message.Command()
-	fmt.Println("Get Command:", cmd)
+	entities := update.Message.Entities
+	message := update.Message.Text
+	fmt.Printf("Received message update: %s\n", message)
 
-	args := update.Message.CommandArguments()
-	fmt.Println("Get Arguments:", args)
-
-	argsWithMarkdown := h.mdUtil.Restore(args, update.Message.Entities, cmd)
+	argsWithMarkdown := h.mdUtil.AddMD(message, entities)
 	fmt.Println("Get Arguments with Markdown:", argsWithMarkdown)
 
 	h.logger.Info("HandleUpdate: received command",
@@ -56,7 +52,7 @@ func (h *Handler) HandleUpdate(update tgbotapi.Update, bot *tgbotapi.BotAPI) {
 		fmt.Printf("\n\nResponding to user %d in chat %d with message: %s\n", telegramID, chatID, msgText)
 
 		msg := tgbotapi.NewMessage(chatID, msgText)
-		msg.ParseMode = "MarkdownV2" // или "MarkdownV2"
+		msg.ParseMode = "MarkdownV2"
 
 		h.logger.Info("HandleUpdate: sending message",
 			zap.Int64("chat_id", chatID),
@@ -113,7 +109,7 @@ func (h *Handler) HandleCommand(cmd string, telegramID int, chatID int64, args s
 		resp, err := fn()
 		if err != nil {
 			h.logger.Error("Service error in command", zap.String("command", cmd), zap.Error(err))
-			return fmt.Sprintf("⚠️ Ошибка работы сервиса\n %s", h.mdUtil.Escape(err.Error()))
+			return fmt.Sprintf("⚠️ Ошибка работы сервиса\n %s", h.mdUtil.EscapeMD(err.Error()))
 		}
 		h.logger.Info("Command executed successfully", zap.String("command", cmd), zap.String("response", resp))
 		return resp
@@ -127,7 +123,7 @@ func (h *Handler) HandleCommand(cmd string, telegramID int, chatID int64, args s
 		resp, err := fn()
 		if err != nil {
 			h.logger.Error("Service error in admin command", zap.String("command", cmd), zap.Error(err))
-			return fmt.Sprintf("⚠️ Ошибка работы сервиса\n %s", h.mdUtil.Escape(err.Error()))
+			return fmt.Sprintf("⚠️ Ошибка работы сервиса\n %s", h.mdUtil.EscapeMD(err.Error()))
 		}
 		h.logger.Info("Admin command executed successfully", zap.String("command", cmd), zap.String("response", resp))
 		return resp

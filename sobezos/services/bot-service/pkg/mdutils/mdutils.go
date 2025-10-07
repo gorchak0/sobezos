@@ -2,7 +2,9 @@ package mdutils
 
 import (
 	"fmt"
+	"sort"
 	"strings"
+	"unicode/utf8"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
@@ -10,137 +12,164 @@ import (
 type MarkdownV2Processor struct{}
 
 func NewMarkdownV2Processor() *MarkdownV2Processor {
-	fmt.Println("NewMarkdownV2Processor called")
 	return &MarkdownV2Processor{}
 }
 
-func (m *MarkdownV2Processor) Escape(text string) string {
-	fmt.Printf("escapeMarkdownV2 called with text: %q\n", text)
-	replacer := []struct{ old, new string }{
-		{"_", "\\_"},
-		{"*", "\\*"},
-		{"[", "\\["},
-		{"]", "\\]"},
-		{"(", "\\("},
-		{")", "\\)"},
-		{"~", "\\~"},
-		{"`", "\\`"},
-		{">", "\\>"},
-		{"#", "\\#"},
-		{"+", "\\+"},
-		{"-", "\\-"},
-		{"=", "\\="},
-		{"|", "\\|"},
-		{"{", "\\{"},
-		{"}", "\\}"},
-		{".", "\\."},
-		{"!", "\\!"},
-		{"u003c", ""},
-	}
-	res := text
-	for _, r := range replacer {
-		res = strings.ReplaceAll(res, r.old, r.new)
-	}
-	return res
+// escapeMDV2 экранирует все специальные символы MarkdownV2
+func (p *MarkdownV2Processor) EscapeMD(text string) string {
+	replacer := strings.NewReplacer(
+		"_", "\\_",
+		"*", "\\*",
+		"[", "\\[",
+		"]", "\\]",
+		"(", "\\(",
+		")", "\\)",
+		"~", "\\~",
+		"`", "\\`",
+		">", "\\>",
+		"#", "\\#",
+		"+", "\\+",
+		"-", "\\-",
+		"=", "\\=",
+		"|", "\\|",
+		"{", "\\{",
+		"}", "\\}",
+		".", "\\.",
+		"!", "\\!",
+	)
+	return replacer.Replace(text)
 }
 
-func (m *MarkdownV2Processor) Restore(text string, entities []tgbotapi.MessageEntity, cmd string) string {
+// chunk описывает кусок текста: с разметкой или без
+type chunk struct {
+	start  int
+	end    int
+	entity *tgbotapi.MessageEntity
+}
 
-	shift := len(cmd) + 2
-
-	fmt.Printf("Restore called with text: %q, entities: %+v, shift: %d\n", text, entities, shift)
+func (p *MarkdownV2Processor) AddMD(message string, entities []tgbotapi.MessageEntity) string {
 	if len(entities) == 0 {
-		return m.Escape(text)
+		return p.EscapeMD(message)
 	}
 
-	// Сначала экранируем текст
-	escaped := m.Escape(text)
+	utf16map := utf16OffsetMap(message)
+	var chunks []chunk
 
-	// Создаем карту смещений для каждого символа
-	originalRunes := []rune(text)
-	escapedRunes := []rune(escaped)
+	// сортируем entities по Offset
+	sort.SliceStable(entities, func(i, j int) bool {
+		return entities[i].Offset < entities[j].Offset
+	})
 
-	// Строим маппинг позиций из оригинального в экранированный текст
-	positionMap := make([]int, len(originalRunes)+1)
-	origIdx, escIdx := 0, 0
+	// разбиваем текст на куски
+	pos := 0
+	for _, e := range entities {
+		start := e.Offset
+		end := e.Offset + e.Length
+		if start >= len(utf16map) {
+			continue
+		}
+		if end > len(utf16map) {
+			end = len(utf16map)
+		}
 
-	for origIdx < len(originalRunes) && escIdx < len(escapedRunes) {
-		if origIdx < len(originalRunes) && escIdx < len(escapedRunes) &&
-			originalRunes[origIdx] == escapedRunes[escIdx] {
-			positionMap[origIdx] = escIdx
-			origIdx++
-			escIdx++
+		// кусок до entity (без разметки)
+		if pos < start {
+			chunks = append(chunks, chunk{
+				start:  pos,
+				end:    start,
+				entity: nil,
+			})
+		}
+
+		// кусок с entity
+		chunks = append(chunks, chunk{
+			start:  start,
+			end:    end,
+			entity: &e,
+		})
+
+		pos = end
+	}
+
+	// оставшийся текст после последней entity
+	if pos < len(utf16map) {
+		chunks = append(chunks, chunk{
+			start:  pos,
+			end:    len(utf16map),
+			entity: nil,
+		})
+	}
+
+	// собираем результат
+	var sb strings.Builder
+	for _, c := range chunks {
+		// пропускаем команду
+		if c.entity != nil && c.entity.Type == "bot_command" {
+			continue
+		}
+
+		/*
+
+			startByte := utf16map[c.start]
+			endByte := utf16map[c.end-1]
+			if c.end < len(utf16map) {
+				_, size := utf8.DecodeRuneInString(message[endByte:])
+				endByte += size
+			}
+
+		*/
+
+		startByte := utf16map[c.start]
+		var endByte int
+		if c.end >= len(utf16map) {
+			endByte = len(message)
 		} else {
-			// Пропускаем экранирующие символы
-			escIdx++
-		}
-	}
-	positionMap[len(originalRunes)] = len(escapedRunes)
-
-	// Применяем entities с учетом новых позиций и сдвига
-	result := make([]rune, len(escapedRunes))
-	copy(result, escapedRunes)
-
-	// Применяем entities в обратном порядке
-	for i := len(entities) - 1; i >= 0; i-- {
-		ent := entities[i]
-		start, end := markdownSymbols(ent.Type)
-		if start == "" && end == "" {
-			continue
+			endByte = utf16map[c.end]
 		}
 
-		// Применяем сдвиг к позициям entity
-		shiftedOffset := ent.Offset - shift
-		if shiftedOffset < 0 {
-			shiftedOffset = 0
-		}
-		shiftedEnd := shiftedOffset + ent.Length
-		if shiftedEnd > len(originalRunes) {
-			shiftedEnd = len(originalRunes)
-		}
+		text := p.EscapeMD(message[startByte:endByte])
 
-		// Преобразуем позиции с учетом экранирования
-		newOffset := positionMap[shiftedOffset]
-		newEnd := positionMap[shiftedEnd]
+		fmt.Printf("[AddMD] chunk text before MD: %q\n", text)
 
-		if newOffset < 0 || newEnd > len(result) || newOffset >= newEnd {
-			fmt.Printf("Skipping entity: offset=%d, end=%d, result_len=%d\n", newOffset, newEnd, len(result))
-			continue
-		}
-
-		// Вставляем закрывающий тег
-		if newEnd <= len(result) {
-			result = append(result[:newEnd], append([]rune(end), result[newEnd:]...)...)
+		if c.entity != nil {
+			switch c.entity.Type {
+			case "bold":
+				text = "*" + text + "*"
+			case "italic":
+				text = "_" + text + "_"
+			case "underline":
+				text = "__" + text + "__"
+			case "strikethrough":
+				text = "~" + text + "~"
+			case "code":
+				text = "`" + text + "`"
+			case "pre":
+				text = "```\n" + text + "\n```"
+			}
 		}
 
-		// Вставляем открывающий тег
-		if newOffset <= len(result) {
-			result = append(result[:newOffset], append([]rune(start), result[newOffset:]...)...)
-		}
-
-		fmt.Printf("Applied entity: type=%s, original_offset=%d, shifted_offset=%d, new_offset=%d, new_end=%d\n",
-			ent.Type, ent.Offset, shiftedOffset, newOffset, newEnd)
+		sb.WriteString(text)
 	}
 
-	return string(result)
+	result := strings.TrimSpace(sb.String())
+
+	return result
 }
 
-func markdownSymbols(entType string) (start, end string) {
-	fmt.Printf("markdownSymbols called with entType: %q\n", entType)
-	switch entType {
-	case "bold":
-		return "*", "*"
-	case "italic":
-		return "_", "_"
-	case "code":
-		return "`", "`"
-	case "pre":
-		return "```", "```"
-	case "underline":
-		return "__", "__"
-	case "strikethrough":
-		return "~", "~"
-	default:
-		return "", ""
+// utf16OffsetMap строит соответствие UTF-16 кодовая единица → UTF-8 байт
+func utf16OffsetMap(s string) []int {
+	var map16 []int
+	i := 0
+	for _, r := range s {
+		if r <= 0xFFFF {
+			map16 = append(map16, i)
+			i += utf8.RuneLen(r)
+		} else {
+			// суррогатная пара — две UTF-16 единицы
+			map16 = append(map16, i)
+			map16 = append(map16, i)
+			i += utf8.RuneLen(r)
+		}
 	}
+	return map16
 }
